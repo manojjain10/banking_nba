@@ -19,17 +19,19 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
+import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from langsmith import Client
 from pydantic import BaseModel, Field
 
-from db import get_conn, init_schema
+from db import get_conn, init_schema, seed_offers
 from nba_app import (
     HIGH_RISK_THRESHOLD,
     LANGSMITH_ORG,
@@ -43,6 +45,15 @@ from nba_app import (
 log = logging.getLogger("nba.server")
 
 _STATIC_DIR = Path(__file__).parent / "web" / "static"
+
+_PORTFOLIO_TTL_SEC = 60.0
+_PORTFOLIO_LOCK = threading.Lock()
+_PORTFOLIO_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+
+
+def invalidate_portfolio_cache() -> None:
+    with _PORTFOLIO_LOCK:
+        _PORTFOLIO_CACHE.clear()
 
 
 # ----------------------------------------------------------------------
@@ -121,6 +132,19 @@ class FeedbackResponse(BaseModel):
     error: Optional[str] = None
 
 
+class OutcomeRequest(BaseModel):
+    customer_id: int = Field(ge=1)
+    offer_id: str = Field(min_length=1)
+    outcome: Literal["ACCEPTED", "DEFERRED", "DECLINED"]
+    channel: Optional[str] = "BANKER_DESKTOP"
+    simulated_amount: Optional[float] = 0.0
+
+
+class OutcomeResponse(BaseModel):
+    ok: bool
+    recorded_at: str
+
+
 # ----------------------------------------------------------------------
 # App
 # ----------------------------------------------------------------------
@@ -128,7 +152,7 @@ class FeedbackResponse(BaseModel):
 app = FastAPI(
     title="Governed NBA Chatbot API",
     description="Hyper-Personalized Cross-Selling Engine on Cloudera AI.",
-    version="1.1.0",
+    version="1.2.0",
 )
 
 
@@ -149,17 +173,61 @@ def get_config() -> AppConfig:
 
 
 @app.get("/api/customers", response_model=List[Customer])
-def get_customers() -> List[Customer]:
-    """Curated demo customer slate spanning segments & governance edge cases."""
+def get_customers(
+    segment: Optional[str] = Query(default=None),
+    offer_id: Optional[str] = Query(default=None),
+    profitable_only: bool = Query(default=False),
+    channel: Optional[str] = Query(default=None),
+    limit: int = Query(default=25, ge=1, le=200),
+) -> List[Customer]:
+    """Curated demo customer slate or cohort-filtered book slice."""
     try:
-        rows = demo_customer_picks()
+        rows = demo_customer_picks(
+            limit=limit,
+            segment=segment,
+            offer_id=offer_id,
+            profitable_only=profitable_only,
+            channel=channel,
+        )
     except Exception as exc:  # noqa: BLE001
         log.warning("customer slate unavailable: %s", exc)
         return []
     return [Customer(**row) for row in rows]
 
+
+@app.get("/api/analytics/portfolio")
+def get_portfolio_analytics(
+    channel: Literal["BANKER_DESKTOP", "IN_APP"] = Query(default="BANKER_DESKTOP"),
+) -> Dict[str, Any]:
+    """Aggregate Governance Funnel, Segment x Risk matrix, and Offer Expected Profit."""
+    from offer_rules import compute_portfolio_analytics
+
+    cache_key = channel.upper()
+    now = time.monotonic()
+    with _PORTFOLIO_LOCK:
+        cached = _PORTFOLIO_CACHE.get(cache_key)
+        if cached is not None and (now - cached[0]) < _PORTFOLIO_TTL_SEC:
+            return cached[1]
+
+    conn = get_conn()
+    try:
+        init_schema(conn)
+        seed_offers(conn)
+        payload = compute_portfolio_analytics(conn, channel_override=cache_key)
+    finally:
+        conn.close()
+
+    with _PORTFOLIO_LOCK:
+        _PORTFOLIO_CACHE[cache_key] = (time.monotonic(), payload)
+
+    return payload
+
+
 @app.get("/api/customers/{customer_id}/nba")
-def get_customer_nba_instant(customer_id: int) -> Dict[str, Any]:
+def get_customer_nba_instant(
+    customer_id: int,
+    channel: Optional[str] = Query(default=None),
+) -> Dict[str, Any]:
     """Instant Banker Desktop view: evaluate governance + Expected Profit immediately."""
     from nba_app import _evaluate_governance_gate, _load_customer
     from offer_rules import evaluate_governance_and_rank
@@ -186,7 +254,9 @@ def get_customer_nba_instant(customer_id: int) -> Dict[str, Any]:
     try:
         init_schema(conn)
         seed_offers(conn)
-        ranked, suppressed = evaluate_governance_and_rank(conn, customer, features={}, top_k=5)
+        ranked, suppressed = evaluate_governance_and_rank(
+            conn, customer, features={}, top_k=5, channel_override=channel
+        )
     finally:
         conn.close()
 
@@ -277,7 +347,10 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
             conn.execute(
                 """
                 UPDATE customers
-                SET avg_checking_balance = MAX(avg_checking_balance, 65000),
+                SET avg_checking_balance = CASE
+                        WHEN avg_checking_balance >= 65000 THEN avg_checking_balance
+                        ELSE 65000
+                    END,
                     customer_segment = 'Mass_Affluent',
                     do_not_solicit = 0
                 WHERE customer_id = ?
@@ -299,6 +372,8 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
     finally:
         conn.close()
 
+    invalidate_portfolio_cache()
+
     tid = req.thread_id or f"event-{uuid.uuid4()}"
     # Step 1: Ingest event context; Step 2: Advance mock/live stage to immediate offer decision
     run_turn(trigger_msg, tid, req.customer_id)
@@ -311,63 +386,90 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
 
 
 @app.get("/api/customers/{customer_id}/research", response_model=TurnResponse)
-def get_customer_research_dossier(customer_id: int) -> TurnResponse:
+def get_customer_research_dossier(
+    customer_id: int,
+    channel: Optional[str] = Query(default=None),
+) -> TurnResponse:
     """Zero-click Banker Desktop Research & NBA Evaluation for a customer."""
     import json
-    from nba_app import _evaluate_governance_gate, _load_customer
+    from nba_app import _evaluate_governance_gate
     from offer_rules import evaluate_governance_and_rank
-
-    customer = _load_customer(customer_id)
-    if customer.get("full_name") == "Unknown":
-        raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
-
-    # Derive Customer 360 Research Insights for the Banker Desktop view
-    balance = float(customer.get("avg_checking_balance") or 0)
-    income = float(customer.get("annual_income") or 1)
-    debt = float(customer.get("existing_debt") or 0)
-    dti = round(debt / max(income, 1.0), 2)
-    try:
-        holdings = json.loads(customer.get("current_products") or "[]")
-    except Exception:
-        holdings = []
-
-    research_signals = {
-        "segment": customer.get("customer_segment"),
-        "product_depth": f"{len(holdings)} of 3 target products ({', '.join(holdings)})",
-        "debt_to_income_ratio": f"{dti:.0%}",
-        "idle_cash_rate_gap": f"${balance:,.0f} earning ~0.01% vs 4.65% HYSA" if balance >= 15_000 else "Below $15k rate-gap threshold",
-        "contact_eligibility": "BLOCKED (DNS=1)" if customer.get("do_not_solicit") else f"Eligible ({customer.get('last_contact_days_ago')}d since last contact)",
-    }
-
-    proba, blocked, gov_reason = _evaluate_governance_gate(customer)
-    if blocked:
-        return TurnResponse(
-            run_id=None,
-            assistant_message="",
-            display_message="",
-            selected_offer=None,
-            candidate_offers=[],
-            suppressed_offers=[
-                {
-                    "offer_id": "ALL_OFFERS",
-                    "offer_name": "All Promotional Solicitations",
-                    "reason": gov_reason,
-                }
-            ],
-            high_risk_probability=proba,
-            risk_blocked=True,
-            governance_reason=gov_reason,
-            conversation_stage="research_preview",
-            accumulated_features=research_signals,
-            customer_record=customer,
-            clarify_count=0,
-        )
 
     conn = get_conn()
     try:
         init_schema(conn)
         seed_offers(conn)
-        ranked, suppressed = evaluate_governance_and_rank(conn, customer, features={}, top_k=5)
+        row = conn.execute(
+            "SELECT * FROM customers WHERE customer_id = ?", (customer_id,)
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
+
+        customer = {k: row[k] for k in row.keys()}
+
+        # Derive Customer 360 Research Signals for the Banker Desktop view
+        balance = float(customer.get("avg_checking_balance") or 0)
+        income = float(customer.get("annual_income") or 1)
+        debt = float(customer.get("existing_debt") or 0)
+        dti = round(debt / max(income, 1.0), 2)
+        try:
+            holdings = json.loads(customer.get("current_products") or "[]")
+            if not isinstance(holdings, list):
+                holdings = []
+        except Exception:
+            holdings = []
+
+        dns = int(customer.get("do_not_solicit") or 0)
+        days_ago = int(customer.get("last_contact_days_ago") or 30)
+
+        research_signals = {
+            "segment": customer.get("customer_segment") or "Mass_Affluent",
+            "product_depth": f"{len(holdings)} of 3 target products ({', '.join(holdings) or 'None'})",
+            "debt_to_income_ratio": f"{dti:.0%}",
+            "idle_cash_rate_gap": (
+                f"${balance:,.0f} earning ~0.01% vs 4.65% HYSA"
+                if balance >= 15_000
+                else "Below $15k rate-gap threshold"
+            ),
+            "contact_eligibility": (
+                "BLOCKED (DNS=1)"
+                if dns == 1
+                else f"Eligible ({days_ago}d since last contact)"
+            ),
+        }
+
+        proba, blocked, gov_reason = _evaluate_governance_gate(customer)
+
+        if blocked:
+            return TurnResponse(
+                run_id=None,
+                assistant_message="",
+                display_message="",
+                selected_offer=None,
+                candidate_offers=[],
+                suppressed_offers=[
+                    {
+                        "offer_id": "ALL_OFFERS",
+                        "offer_name": "All Promotional Solicitations",
+                        "reason": gov_reason,
+                    }
+                ],
+                high_risk_probability=proba,
+                risk_blocked=True,
+                governance_reason=gov_reason,
+                conversation_stage="research_preview",
+                accumulated_features=research_signals,
+                customer_record=customer,
+                clarify_count=0,
+            )
+
+        ranked, suppressed = evaluate_governance_and_rank(
+            conn,
+            customer,
+            features={},
+            top_k=5,
+            channel_override=channel,
+        )
     finally:
         conn.close()
 
@@ -386,6 +488,50 @@ def get_customer_research_dossier(customer_id: int) -> TurnResponse:
         customer_record=customer,
         clarify_count=0,
     )
+
+
+@app.post("/api/outcomes", response_model=OutcomeResponse)
+def post_outcome(req: OutcomeRequest) -> OutcomeResponse:
+    """Persist advisor/customer offer outcome for retraining telemetry."""
+    from datetime import datetime, timezone
+
+    recorded_at = datetime.now(timezone.utc).isoformat()
+    conn = get_conn()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS offer_outcomes (
+                customer_id      INTEGER NOT NULL,
+                offer_id         TEXT NOT NULL,
+                outcome          TEXT NOT NULL,
+                channel          TEXT,
+                simulated_amount REAL,
+                recorded_at      TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO offer_outcomes (
+                customer_id, offer_id, outcome, channel, simulated_amount, recorded_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                req.customer_id,
+                req.offer_id,
+                req.outcome,
+                req.channel or "BANKER_DESKTOP",
+                float(req.simulated_amount or 0.0),
+                recorded_at,
+            ),
+        )
+        conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("outcome logging skipped: %s", exc)
+    finally:
+        conn.close()
+
+    return OutcomeResponse(ok=True, recorded_at=recorded_at)
     
 @app.post("/api/feedback", response_model=FeedbackResponse)
 def post_feedback(req: FeedbackRequest) -> FeedbackResponse:

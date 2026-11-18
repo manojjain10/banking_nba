@@ -31,52 +31,123 @@ from faker import Faker
 
 from db import DB_PATH, get_conn, init_schema, seed_offers
 
+_SEGMENTS = [
+    "Mass_Affluent",
+    "Rate_Sensitive_Saver",
+    "Young_Professional",
+    "Credit_Rebuilder",
+]
+_SEGMENT_WEIGHTS = [26, 24, 36, 14]
+
+_SEGMENT_RISK_WEIGHTS = {
+    "Mass_Affluent": [76, 18, 6],
+    "Rate_Sensitive_Saver": [72, 20, 8],
+    "Young_Professional": [54, 34, 12],
+    "Credit_Rebuilder": [15, 33, 52],
+}
+
 _RISK_TIERS = ["LOW", "MED", "HIGH"]
-_RISK_WEIGHTS = [65, 25, 10]
 
 _EMP_STATUSES = ["EMPLOYED", "SELF_EMPLOYED", "STUDENT", "UNEMPLOYED", "RETIRED"]
 _EMP_WEIGHTS = [60, 15, 10, 5, 10]
 
 
-def _derive_segment_and_profile(
-    tier: str, income: float, debt: float, rng: random.Random
-) -> tuple[str, int, float, list[str], str, int, int]:
-    """Derive segment, credit score, checking balance, holdings, and governance flags."""
+def _sample_segment_profile(
+    rng: random.Random,
+) -> tuple[str, str, float, float, int, float, list[str], str, int, int]:
+    """Sample realistic segment + multi-tier (LOW/MED/HIGH) banking profile."""
+    segment = rng.choices(_SEGMENTS, weights=_SEGMENT_WEIGHTS, k=1)[0]
+    tier = rng.choices(_RISK_TIERS, weights=_SEGMENT_RISK_WEIGHTS[segment], k=1)[0]
+
     # Governance flags: ~6% Do-Not-Solicit, ~12% recently contacted (<14 days)
     do_not_solicit = 1 if rng.random() < 0.06 else 0
     last_contact_days = rng.randint(1, 13) if rng.random() < 0.12 else rng.randint(15, 120)
     channel = rng.choices(["IN_APP", "BANKER_DESKTOP"], weights=[75, 25], k=1)[0]
 
-    if tier == "HIGH":
-        segment = "Credit_Rebuilder"
-        credit_score = rng.randint(510, 619)
-        balance = round(rng.uniform(100, 2_500), 2)
-        products = ["CHECKING_BASIC"]
-    elif income >= 150_000 and tier == "LOW":
-        segment = "Mass_Affluent"
-        credit_score = rng.randint(740, 830)
-        balance = round(rng.uniform(35_000, 140_000), 2)
+    if segment == "Mass_Affluent":
+        channel = rng.choices(["BANKER_DESKTOP", "IN_APP"], weights=[65, 35], k=1)[0]
+        if tier == "LOW":
+            income = round(rng.uniform(155_000, 260_000), 2)
+            debt = round(rng.uniform(0, income * 0.25), 2)
+            credit_score = rng.randint(745, 835)
+            balance = round(rng.uniform(42_000, 145_000), 2)
+        elif tier == "MED":
+            income = round(rng.uniform(145_000, 225_000), 2)
+            debt = round(rng.uniform(income * 0.22, income * 0.48), 2)
+            credit_score = rng.randint(665, 735)
+            balance = round(rng.uniform(18_000, 62_000), 2)
+        else:  # HIGH
+            income = round(rng.uniform(130_000, 195_000), 2)
+            debt = round(rng.uniform(income * 0.45, income * 0.72), 2)
+            credit_score = rng.randint(555, 635)
+            balance = round(rng.uniform(3_500, 19_000), 2)
         products = rng.choice([
             ["CHECKING_PREMIER"],
             ["CHECKING_PREMIER", "CARD_CORE"],
         ])
-        channel = "BANKER_DESKTOP"
-    elif income >= 65_000 and debt < income * 0.20 and tier == "LOW":
-        segment = "Rate_Sensitive_Saver"
-        credit_score = rng.randint(700, 790)
-        balance = round(rng.uniform(16_000, 48_000), 2)
+
+    elif segment == "Rate_Sensitive_Saver":
+        if tier == "LOW":
+            income = round(rng.uniform(72_000, 148_000), 2)
+            debt = round(rng.uniform(0, income * 0.20), 2)
+            credit_score = rng.randint(715, 795)
+            balance = round(rng.uniform(18_000, 54_000), 2)
+        elif tier == "MED":
+            income = round(rng.uniform(58_000, 125_000), 2)
+            debt = round(rng.uniform(income * 0.18, income * 0.42), 2)
+            credit_score = rng.randint(650, 714)
+            balance = round(rng.uniform(15_500, 38_000), 2)
+        else:  # HIGH
+            income = round(rng.uniform(45_000, 98_000), 2)
+            debt = round(rng.uniform(income * 0.40, income * 0.68), 2)
+            credit_score = rng.randint(545, 625)
+            balance = round(rng.uniform(8_000, 24_000), 2)
         products = ["CHECKING_BASIC"]
-    else:
-        segment = "Young_Professional"
-        credit_score = rng.randint(640, 735)
-        balance = round(rng.uniform(1_500, 14_000), 2)
+
+    elif segment == "Young_Professional":
+        if tier == "LOW":
+            income = round(rng.uniform(62_000, 138_000), 2)
+            debt = round(rng.uniform(0, income * 0.28), 2)
+            credit_score = rng.randint(700, 780)
+            balance = round(rng.uniform(4_500, 24_000), 2)
+        elif tier == "MED":
+            income = round(rng.uniform(42_000, 96_000), 2)
+            debt = round(rng.uniform(income * 0.20, income * 0.48), 2)
+            credit_score = rng.randint(645, 699)
+            balance = round(rng.uniform(1_800, 13_500), 2)
+        else:  # HIGH
+            income = round(rng.uniform(28_000, 64_000), 2)
+            debt = round(rng.uniform(income * 0.38, income * 0.70), 2)
+            credit_score = rng.randint(535, 619)
+            balance = round(rng.uniform(350, 4_200), 2)
         products = rng.choice([
             ["CHECKING_BASIC"],
             ["CHECKING_BASIC", "CARD_CORE"],
         ])
 
+    else:  # Credit_Rebuilder
+        if tier == "LOW":
+            income = round(rng.uniform(42_000, 82_000), 2)
+            debt = round(rng.uniform(500, income * 0.24), 2)
+            credit_score = rng.randint(660, 715)
+            balance = round(rng.uniform(2_500, 14_000), 2)
+        elif tier == "MED":
+            income = round(rng.uniform(36_000, 68_000), 2)
+            debt = round(rng.uniform(1_500, income * 0.38), 2)
+            credit_score = rng.randint(630, 675)
+            balance = round(rng.uniform(900, 6_500), 2)
+        else:  # HIGH
+            income = round(rng.uniform(16_000, 44_000), 2)
+            debt = round(rng.uniform(3_000, income * 0.65), 2)
+            credit_score = rng.randint(505, 605)
+            balance = round(rng.uniform(100, 2_500), 2)
+        products = ["CHECKING_BASIC"]
+
     return (
         segment,
+        tier,
+        income,
+        debt,
         credit_score,
         balance,
         products,
@@ -84,14 +155,6 @@ def _derive_segment_and_profile(
         do_not_solicit,
         last_contact_days,
     )
-
-
-def _sample_income(tier: str, rng: random.Random) -> float:
-    if tier == "LOW":
-        return round(rng.uniform(65_000, 240_000), 2)
-    if tier == "MED":
-        return round(rng.uniform(40_000, 85_000), 2)
-    return round(rng.uniform(12_000, 42_000), 2)
 
 
 def _sample_age(emp: str, rng: random.Random) -> int:
@@ -166,21 +229,21 @@ def _customer_rows(start_id: int, end_id: int, seed: int) -> Iterable[tuple]:
 
     effective_start = max(start_id, len(curated) + 1)
     for i in range(effective_start, end_id + 1):
-        tier = rng.choices(_RISK_TIERS, weights=_RISK_WEIGHTS, k=1)[0]
         emp = rng.choices(_EMP_STATUSES, weights=_EMP_WEIGHTS, k=1)[0]
         age = _sample_age(emp, rng)
-        income = _sample_income(tier, rng)
-        existing_debt = round(rng.uniform(0, max(income * 0.55, 1)), 2)
 
         (
             segment,
+            tier,
+            income,
+            existing_debt,
             credit_score,
             balance,
             products,
             channel,
             do_not_solicit,
             last_contact_days,
-        ) = _derive_segment_and_profile(tier, income, existing_debt, rng)
+        ) = _sample_segment_profile(rng)
 
         yield (
             i,
@@ -208,8 +271,17 @@ def _customer_rows(start_id: int, end_id: int, seed: int) -> Iterable[tuple]:
         )
 
 
-def seed_customers(conn: sqlite3.Connection, n: int = 10_000, seed: int = 42) -> int:
-    """Seed the ``customers`` table up to ``n`` rows. Idempotent."""
+def seed_customers(
+    conn: sqlite3.Connection,
+    n: int = 10_000,
+    seed: int = 42,
+    reseed: bool = False,
+) -> int:
+    """Seed the ``customers`` table up to ``n`` rows. Idempotent unless ``reseed=True``."""
+    if reseed:
+        conn.execute("DELETE FROM customers")
+        conn.commit()
+
     existing = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
     if existing >= n:
         print(f"[pii_datagen] customers already has {existing} rows (>= {n}); skipping seed.")
@@ -248,13 +320,18 @@ def main() -> None:
         action="store_true",
         help="Only create schema and seed if missing; safe to run on every app launch.",
     )
+    parser.add_argument(
+        "--reseed",
+        action="store_true",
+        help="Clear and regenerate customer rows so updated segment/risk distributions take effect.",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Faker/RNG seed.")
     args = parser.parse_args()
 
     with get_conn() as conn:
         init_schema(conn)
         n_offers = seed_offers(conn)
-        n_customers = seed_customers(conn, n=args.rows, seed=args.seed)
+        n_customers = seed_customers(conn, n=args.rows, seed=args.seed, reseed=args.reseed)
         print(
             f"[pii_datagen] DB ready at {DB_PATH} "
             f"(offers={n_offers}, customers={n_customers})"

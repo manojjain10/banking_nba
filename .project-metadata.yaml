@@ -1,0 +1,142 @@
+name: Governed Banking Next-Best-Action on Cloudera AI (Iceberg + CDW Impala)
+description: >
+  Hyper-personalized, policy-governed retail banking Next-Best-Action (NBA)
+  Advisor Workbench on Cloudera on AWS. Decouples compute from storage with
+  Apache Iceberg v2 tables on S3 queried through Cloudera Data Warehouse (CDW)
+  Impala, orchestrated with LangGraph + Cloudera AI Inference Service (Nemotron
+  & ONNX risk scoring), and traced via LangSmith.
+author: Cloudera
+specification_version: 1.0
+prototype_version: 1.1
+date: "2026-11-18"
+
+environment_variables:
+  NBA_DB_BACKEND:
+    default: "impala"
+    description: "Database backend: 'impala' for CDW Apache Iceberg v2 on AWS, or 'sqlite' for offline local fallback."
+    required: true
+  CML_IMPALA_CONNECTION_NAME:
+    default: ""
+    description: "Optional Cloudera AI Workbench Data Connection name for CDW Impala (uses cml.data_v1). Leave empty to connect directly via IMPALA_HOST."
+    required: false
+  IMPALA_HOST:
+    default: ""
+    description: "CDW Impala Virtual Warehouse coordinator hostname (e.g., coordinator-<vw-id>.dw-<env>.cloudera.site)."
+    required: false
+  IMPALA_PORT:
+    default: "443"
+    description: "CDW Impala HiveServer2 HTTPS port (default 443)."
+    required: false
+  IMPALA_HTTP_PATH:
+    default: "cliservice"
+    description: "CDW Impala HTTP transport path (default 'cliservice')."
+    required: false
+  IMPALA_DATABASE:
+    default: "banking_nba"
+    description: "Target Hive Metastore / Apache Iceberg v2 database name in CDW."
+    required: false
+  IMPALA_AUTH_MECHANISM:
+    default: "LDAP"
+    description: "Impala authentication mechanism ('LDAP' for CDP workload credentials or 'JWT')."
+    required: false
+  IMPALA_USER:
+    default: ""
+    description: "CDP workload username for CDW Impala authentication."
+    required: false
+  IMPALA_PASSWORD:
+    default: ""
+    description: "CDP workload password for CDW Impala authentication."
+    required: false
+  NBA_CUSTOMER_ROWS:
+    default: "10000"
+    description: "Number of customer rows to seed into banking_nba.customers during bootstrap."
+    required: false
+  LLM_MODEL_ID:
+    default: "nemotron"
+    description: "Deployed LLM model identifier in Cloudera AI Inference Service (CAII)."
+    required: false
+  LLM_ENDPOINT_BASE_URL:
+    default: ""
+    description: "OpenAI-compatible HTTPS base URL (/v1) for the Nemotron endpoint in CAII."
+    required: false
+  LLM_CDP_TOKEN:
+    default: ""
+    description: "CAII endpoint API key or CDP token for LLM inference."
+    required: false
+  CLF_MODEL_ID:
+    default: "nba-risk-onnx-xgboost"
+    description: "Optional ONNX customer-risk model identifier in Cloudera AI Registry / CAII."
+    required: false
+  CLF_ENDPOINT_BASE_URL:
+    default: ""
+    description: "Optional Open Inference v2 HTTPS endpoint URL for the ONNX customer-risk classifier."
+    required: false
+  CLF_CDP_TOKEN:
+    default: ""
+    description: "Optional CAII endpoint API key or CDP token for the ONNX customer-risk classifier."
+    required: false
+  NBA_MOCK:
+    default: "0"
+    description: "Set to '1' for deterministic mock LLM mode when CAII endpoints are not yet configured."
+    required: false
+  LANGSMITH_TRACING:
+    default: "false"
+    description: "Set to 'true' to enable LangSmith tracing (requires VPC egress and LANGSMITH_API_KEY)."
+    required: false
+  LANGSMITH_API_KEY:
+    default: ""
+    description: "Optional LangSmith API key for tracing and advisor/user feedback."
+    required: false
+  LANGSMITH_ORG:
+    default: ""
+    description: "Optional LangSmith organization ID/slug for deep-links."
+    required: false
+  LANGSMITH_PROJECT:
+    default: "nba-demo"
+    description: "LangSmith project name."
+    required: false
+
+runtimes:
+  - editor: Workbench
+    kernel: Python 3.10
+    edition: Standard
+
+tasks:
+  - type: run_session
+    name: Install Python Dependencies
+    script: AI_Blueprint_Observability-Next-Best-Action/scripts/install_dependencies.py
+    short_summary: Install FastAPI, LangGraph, Impyla/Thrift, and ML dependencies.
+    kernel: Python 3.10
+    cpu: 2
+    memory: 8
+
+  - type: run_session
+    name: Initialize & Seed Apache Iceberg v2 Tables
+    script: AI_Blueprint_Observability-Next-Best-Action/scripts/seed_iceberg_tables.py
+    short_summary: Create banking_nba Iceberg v2 tables in CDW Impala (or SQLite fallback) and seed 10,000 profiles.
+    long_summary: Connects to the configured CDW Impala Virtual Warehouse (or local SQLite fallback when CDW host is not yet set) and idempotently seeds curated demo personas, synthetic banking customers, and multi-product offers.
+    kernel: Python 3.10
+    cpu: 2
+    memory: 8
+
+  - type: create_job
+    name: Seed Apache Iceberg Banking Tables
+    entity_label: seed_iceberg_tables_job
+    script: AI_Blueprint_Observability-Next-Best-Action/scripts/seed_iceberg_tables.py
+    arguments: ""
+    short_summary: Re-runnable Cloudera AI Job to initialize or refresh Apache Iceberg v2 tables in CDW Impala.
+    cpu: 2
+    memory: 8
+    environment:
+      TASK_TYPE: CREATE/RUN_JOB
+
+  - type: start_application
+    name: Governed NBA Advisor Workbench
+    subdomain: nba-workbench
+    script: AI_Blueprint_Observability-Next-Best-Action/launch_app.py
+    short_summary: Launch the Governed NBA Branch Advisor Workbench & LangGraph API.
+    long_summary: Starts uvicorn bound to 127.0.0.1:$CDSW_READONLY_PORT serving the 3-column Branch Advisor Workbench and LangGraph multi-agent API backed by CDW Impala + Apache Iceberg v2.
+    cpu: 2
+    memory: 4
+    environment:
+      TASK_TYPE: START_APPLICATION

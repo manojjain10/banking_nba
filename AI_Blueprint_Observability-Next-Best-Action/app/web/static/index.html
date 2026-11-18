@@ -3,20 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>NBA Credit-Card Chatbot</title>
+    <title>Branch Advisor Workbench · Governed NBA</title>
     <meta
       name="description"
-      content="Next-Best-Action credit-card chatbot on Cloudera AI, traced with LangSmith."
+      content="Governed Next-Best-Action Branch Advisor Desktop on Cloudera AI, traced with LangSmith."
     />
 
-    <!--
-      Theme bootstrap. Must be inline and synchronous, and must run before the
-      stylesheet paints: the module script at the end of <body> is far too late
-      and the page would visibly flash light before switching to dark.
-
-      Light is the default on purpose - the OS preference is not consulted.
-      The key here mirrors STORAGE_KEY in src/theme.ts.
-    -->
     <script>
       (function () {
         try {
@@ -31,74 +23,322 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=7" />
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>%F0%9F%92%B3</text></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>%F0%9F%8F%A6</text></svg>"
     />
   </head>
   <body>
+    <!-- TOP BAR: View Switcher, Customer Search & Selector, Role Switcher, Alerts -->
     <header class="topbar">
-      <div class="topbar__brand">
+      <div class="topbar__search-group">
         <span class="topbar__mark" aria-hidden="true">◆</span>
-        <div>
-          <h1>Next-Best-Action Chatbot</h1>
-          <p class="topbar__sub">LangGraph multi-agent system on Cloudera AI</p>
+
+        <div class="view-switcher" role="tablist" aria-label="Workspace View">
+          <button
+            id="view-btn-workbench"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            class="view-switcher__btn view-switcher__btn--active"
+          >
+            Advisor Workbench
+          </button>
+          <button
+            id="view-btn-analytics"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            class="view-switcher__btn"
+          >
+            Portfolio &amp; Risk Analytics
+          </button>
         </div>
+
+        <div id="topbar-customer-controls" class="search-combo">
+          <input
+            id="customer-search"
+            type="search"
+            class="search-combo__input"
+            placeholder="🔍 Search customer by name or ID (e.g. Marcus Chen or #2)..."
+            aria-label="Search customer"
+          />
+          <select
+            id="customer-select"
+            class="search-combo__select"
+            aria-label="Select customer"
+          >
+            <option value="">Loading customers...</option>
+          </select>
+        </div>
+        <button
+          id="cohort-filter-pill"
+          type="button"
+          class="cohort-pill hidden"
+          title="Clear active portfolio cohort filter"
+        ></button>
+        <span id="customer-hint" class="hint"></span>
       </div>
 
       <div class="topbar__controls">
-        <div class="field">
-          <label for="customer-select">Customer</label>
-          <select id="customer-select"></select>
-          <p id="customer-hint" class="hint"></p>
-        </div>
+        <select id="role-select" class="topbar__role" aria-label="Advisor Role">
+          <option value="BANKER_DESKTOP" selected>Role: Branch Advisor</option>
+          <option value="IN_APP">Role: Customer In-App</option>
+        </select>
+
+        <button
+          id="alerts-btn"
+          type="button"
+          class="btn btn--ghost alerts-btn"
+          title="Real-time customer trigger alerts"
+        >
+          🔔 <span id="alerts-badge" class="alerts-badge">2</span>
+        </button>
+
         <button id="new-conversation" type="button" class="btn btn--ghost">
-          New conversation
+          Reset
         </button>
         <button id="theme-toggle" type="button" class="btn--icon"></button>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="panel panel--chat" aria-label="Conversation">
-        <div id="chat" class="chat" aria-live="polite"></div>
+    <!-- 3-COLUMN ADVISOR WORKBENCH -->
+    <main id="workbench-view" class="workbench">
+      <!-- COLUMN 1: CUSTOMER SNAPSHOT -->
+      <aside class="panel panel--snapshot" aria-label="Customer Snapshot">
+        <div class="panel__header">
+          <h2>CUSTOMER SNAPSHOT</h2>
+        </div>
+        <div id="snapshot-body" class="snapshot"></div>
+      </aside>
 
-        <button
-          id="scroll-bottom"
-          type="button"
-          class="scroll-bottom"
-          aria-label="Scroll to latest message"
-          title="Scroll to latest message"
-        >
-          ↓
-        </button>
+      <!-- COLUMN 2: RANKED NEXT BEST ACTIONS & AI SIGNALS -->
+      <section class="panel panel--offers" aria-label="Ranked Next Best Actions">
+        <div class="panel__header">
+          <h2>RANKED NEXT BEST ACTIONS</h2>
+          <p id="governance-subtitle">Policy-First &amp; Expected Profit Ranked</p>
+        </div>
 
-        <form id="composer" class="composer" autocomplete="off">
-          <textarea
-            id="composer-input"
-            class="composer__input"
-            rows="1"
-            placeholder="Type your message…  (Enter to send, Shift+Enter for a new line)"
-            aria-label="Message"
-          ></textarea>
-          <button id="composer-send" type="submit" class="btn btn--primary">
-            Send
-          </button>
-        </form>
+        <div id="offers-list" class="offers-list"></div>
+
+        <div class="signals-card">
+          <h3>WHY THIS OFFER? (AI Signals)</h3>
+          <ul id="ai-signals" class="signals-list"></ul>
+        </div>
+
+        <details class="audit-drawer">
+          <summary id="suppressed-summary">Governance Audit: Suppressed Offers (0)</summary>
+          <div id="suppressed-list" class="suppressed-list"></div>
+        </details>
       </section>
 
-      <aside class="panel panel--obs" aria-label="Observability">
-        <div class="panel__header">
-          <h2>Observability</h2>
-          <p>Graph telemetry for the current thread</p>
+      <!-- COLUMN 3: CONVERSATION & ACTION PANEL -->
+      <section class="panel panel--action" aria-label="Conversation and Action Panel">
+        <div class="panel__header panel__header--tabs">
+          <div>
+            <h2>CONVERSATION &amp; ACTION PANEL</h2>
+          </div>
+          <div class="tabs" role="tablist">
+            <button
+              id="tab-btn-script"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              class="tab tab--active"
+            >
+              Advisor Script
+            </button>
+            <button
+              id="tab-btn-chat"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              class="tab"
+            >
+              Live AI Chat
+            </button>
+          </div>
         </div>
-        <div id="observability" class="obs"></div>
-      </aside>
+
+        <!-- TAB 1: ADVISOR SCRIPT, SIMULATOR, EXECUTION & OUTCOME LOGGING -->
+        <div id="pane-script" class="action-pane">
+          <div id="active-offer-pill" class="active-offer-pill">
+            Active Offer: Loading...
+          </div>
+
+          <div class="action-section">
+            <div class="section-label">TALKING POINTS:</div>
+            <blockquote id="talking-points" class="talking-points"></blockquote>
+            <div id="compliance-footer" class="compliance-box"></div>
+          </div>
+
+          <div class="action-section simulator-card">
+            <div class="section-label">QUICK SIMULATOR:</div>
+            <div class="sim-row">
+              <label for="sim-amount">Transfer / Allocation Amount:</label>
+              <div class="sim-input-wrap">
+                <span>$</span>
+                <input
+                  id="sim-amount"
+                  type="number"
+                  min="0"
+                  step="500"
+                  value="15000"
+                />
+              </div>
+            </div>
+            <div class="sim-output">
+              <span>Projected 12-Mo Interest / Value:</span>
+              <strong id="sim-projected" class="sim-value">+$697.50</strong>
+            </div>
+          </div>
+
+          <div class="action-section">
+            <div class="section-label">EXECUTION BUTTONS:</div>
+            <div class="exec-actions">
+              <button id="btn-push-app" type="button" class="btn btn--secondary btn--full">
+                📲 Push Offer to Customer App
+              </button>
+              <button id="btn-open-now" type="button" class="btn btn--primary btn--full">
+                ✅ Open Account Now
+              </button>
+            </div>
+          </div>
+
+          <div class="action-section outcome-card">
+            <div class="section-label">LOG OUTCOME (Feeds AI Model):</div>
+            <div class="outcome-options">
+              <label class="outcome-radio">
+                <input type="radio" name="outcome" value="ACCEPTED" />
+                <span>Accepted</span>
+              </label>
+              <label class="outcome-radio">
+                <input type="radio" name="outcome" value="DEFERRED" />
+                <span>Deferred</span>
+              </label>
+              <label class="outcome-radio">
+                <input type="radio" name="outcome" value="DECLINED" />
+                <span>Declined</span>
+              </label>
+            </div>
+            <p id="outcome-feedback" class="outcome-feedback"></p>
+          </div>
+        </div>
+
+        <!-- TAB 2: MULTI-TURN LANGGRAPH CHAT (PRESERVED) -->
+        <div id="pane-chat" class="chat-pane hidden">
+          <div id="chat" class="chat" aria-live="polite"></div>
+
+          <button
+            id="scroll-bottom"
+            type="button"
+            class="scroll-bottom"
+            aria-label="Scroll to latest message"
+            title="Scroll to latest message"
+          >
+            ↓
+          </button>
+
+          <form id="composer" class="composer" autocomplete="off">
+            <textarea
+              id="composer-input"
+              class="composer__input"
+              rows="1"
+              placeholder="Simulate customer conversation…"
+              aria-label="Message"
+            ></textarea>
+            <button id="composer-send" type="submit" class="btn btn--primary">
+              Send
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- PORTFOLIO SEGMENTATION, RISK & PROFITABILITY ANALYTICS VIEW -->
+    <main
+      id="portfolio-view"
+      class="portfolio-view hidden"
+      aria-label="Portfolio Segmentation, Risk and Profitability Analytics"
+    >
+      <div class="portfolio-banner">
+        <div>
+          <h1 class="portfolio-banner__title">
+            Portfolio Segmentation, Risk &amp; Profitable Addressable Book
+          </h1>
+          <p id="portfolio-subtitle" class="portfolio-banner__sub">
+            Evaluating Policy-First governance gates and Expected Net Profit across the customer book…
+          </p>
+        </div>
+        <span class="portfolio-banner__hint">
+          Click any segment or product row below to filter &amp; work that cohort in the Advisor Workbench →
+        </span>
+      </div>
+
+      <!-- 4-CARD HEADLINE KPI STRIP -->
+      <section
+        id="portfolio-kpis"
+        class="kpi-grid"
+        aria-label="Portfolio Headline Metrics"
+      ></section>
+
+      <!-- CHART 1: GOVERNANCE-TO-PROFITABILITY POPULATION FUNNEL -->
+      <section class="panel chart-panel" aria-labelledby="funnel-heading">
+        <div class="panel__header chart-panel__header">
+          <div>
+            <h2 id="funnel-heading">
+              1 · GOVERNANCE-TO-PROFITABILITY POPULATION FUNNEL
+            </h2>
+            <p>
+              Progressive Policy-First suppression gates from Total Customer Book to Profitable Targetable Cohort (Expected Profit &gt; $0)
+            </p>
+          </div>
+        </div>
+        <div id="chart-funnel" class="chart-body"></div>
+      </section>
+
+      <!-- 2-COLUMN CHARTS: SEGMENT x RISK MATRIX + OFFER EXPECTED PROFIT -->
+      <div class="portfolio-grid">
+        <!-- CHART 2: CUSTOMER SEGMENTATION x RISK TIER & PROFITABLE SHARE -->
+        <section class="panel chart-panel" aria-labelledby="seg-risk-heading">
+          <div class="panel__header chart-panel__header">
+            <div>
+              <h2 id="seg-risk-heading">
+                2 · CUSTOMER SEGMENTATION × RISK TIER &amp; PROFITABLE SHARE
+              </h2>
+              <p>
+                Risk tier composition (LOW / MED / HIGH) and net-profitable targetable rate per segment — click to drill into cohort
+              </p>
+            </div>
+            <div class="chart-legend" aria-label="Risk tier legend">
+              <span class="legend-item"><i class="legend-swatch swatch--low"></i>LOW</span>
+              <span class="legend-item"><i class="legend-swatch swatch--med"></i>MED</span>
+              <span class="legend-item"><i class="legend-swatch swatch--high"></i>HIGH</span>
+            </div>
+          </div>
+          <div id="chart-segment-risk" class="chart-body"></div>
+        </section>
+
+        <!-- CHART 3: TARGETABLE POPULATION & EXPECTED NET PROFIT BY OFFER -->
+        <section class="panel chart-panel" aria-labelledby="offer-profit-heading">
+          <div class="panel__header chart-panel__header">
+            <div>
+              <h2 id="offer-profit-heading">
+                3 · TARGETABLE POPULATION &amp; EXPECTED PROFIT BY PRODUCT OFFER
+              </h2>
+              <p>
+                Ranked by total annual Expected Net Profit ($) across primary #1 NBA assignments — click to drill into cohort
+              </p>
+            </div>
+          </div>
+          <div id="chart-offer-profit" class="chart-body"></div>
+        </section>
+      </div>
     </main>
 
     <div id="toasts" class="toasts" aria-live="polite"></div>
 
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=8"></script>
   </body>
 </html>

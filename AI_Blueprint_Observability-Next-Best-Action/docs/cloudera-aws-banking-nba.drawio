@@ -1,0 +1,338 @@
+<mxfile host="Electron" version="29.6.1">
+  <diagram name="Cloudera-AWS-Banking-NBA" id="cloudera-aws-banking-nba">
+    <mxGraphModel dx="2250" dy="1000" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2200" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title and Subtitle Header -->
+        <mxCell id="title-group" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="1420" height="83" as="geometry" />
+        </mxCell>
+        <mxCell id="title-text" style="text;html=1;resizable=1;points=[];autosize=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=30;fontStyle=1;fontFamily=Helvetica;" value="Governed Banking Next-Best-Action on Cloudera on AWS" vertex="1" parent="title-group">
+          <mxGeometry width="1050" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle-text" style="text;html=1;resizable=0;points=[];autosize=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=16;fontFamily=Helvetica;" value="Advisor Workbench, Portfolio Risk &amp; Profit Analytics, LangGraph MAS, Cloudera AI Inference &amp; CDW Impala Apache Iceberg v2" vertex="1" parent="title-group">
+          <mxGeometry x="5" y="40" width="1150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="title-separator" style="line;strokeWidth=2;html=1;fontSize=14;strokeColor=#FF9900;fontFamily=Helvetica;" value="" vertex="1" parent="title-group">
+          <mxGeometry x="5" y="70" width="1410" height="10" as="geometry" />
+        </mxCell>
+
+        <!-- External Actor: Advisors and Banking Customers -->
+        <mxCell id="users-advisors" style="fillColor=#f5f5f5;strokeColor=light-dark(#666666,#D4D4D4);rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#333333;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1;perimeterSpacing=0;" value="Branch Advisors &amp;amp; Customers" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="130" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="users-advisors-icon" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#232F3D;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.users;fontFamily=Helvetica;" value="" vertex="1" parent="users-advisors">
+          <mxGeometry x="41" y="42" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- External SaaS / Plane: LangSmith Observability -->
+        <mxCell id="svc-group-langsmith" style="fillColor=#FCE4EC;strokeColor=#E7157B;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="LLM Observability" vertex="1" parent="1">
+          <mxGeometry x="40" y="540" width="130" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-langsmith" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.generic_application;fontFamily=Helvetica;shadow=1;" value="LangSmith&lt;div&gt;&lt;i&gt;Traces &amp;amp; Evals&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-langsmith">
+          <mxGeometry x="41" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- AWS Cloud Boundary -->
+        <mxCell id="aws-cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=14;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=light-dark(#232F3E0D,#232F3E0D);fillStyle=auto;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;fontFamily=Helvetica;" value="AWS Cloud (Cloudera Data Platform Public Cloud)" vertex="1" parent="1">
+          <mxGeometry x="230" y="140" width="1230" height="740" as="geometry" />
+        </mxCell>
+
+        <!-- Decorative Region Group (container=0 per AWS4 drawio spec) -->
+        <mxCell id="region-1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=14;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=light-dark(#0C7B7D0D,#0C7B7D0D);fillStyle=auto;verticalAlign=top;align=left;spacingLeft=30;fontColor=#00A4A6;dashed=1;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;fontFamily=Helvetica;" value="AWS Region (e.g., us-east-1)" vertex="1" parent="1">
+          <mxGeometry x="250" y="180" width="1190" height="680" as="geometry" />
+        </mxCell>
+
+        <!-- CDP Customer VPC -->
+        <mxCell id="vpc-1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=14;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=light-dark(#8C4FFF0D,#8C4FFF0D);fillStyle=auto;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;fontFamily=Helvetica;" value="CDP Environment VPC (Amazon EKS Workloads)" vertex="1" parent="aws-cloud">
+          <mxGeometry x="40" y="80" width="930" height="620" as="geometry" />
+        </mxCell>
+
+        <!-- Column 1 inside VPC: AWS ALB + Cloudera Knox SSO -->
+        <mxCell id="svc-group-alb" style="fillColor=#EDE7F6;strokeColor=#8C4FFF;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#8C4FFF;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Ingress &amp;amp; SSO" vertex="1" parent="vpc-1">
+          <mxGeometry x="40" y="70" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-alb" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_load_balancing;fontFamily=Helvetica;shadow=1;" value="AWS ALB + Knox&lt;div&gt;&lt;i&gt;TLS / SAML SSO&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-alb">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Column 2 Top inside VPC: Cloudera AI Workbench Application -->
+        <mxCell id="svc-group-workbench" style="fillColor=#FFF2E8;strokeColor=#ED7100;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#ED7100;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Cloudera AI App" vertex="1" parent="vpc-1">
+          <mxGeometry x="270" y="70" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-workbench" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks;fontFamily=Helvetica;shadow=1;" value="NBA Workbench UI&lt;div&gt;&lt;i&gt;FastAPI + TS (server.py)&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-workbench">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Column 2 Bottom inside VPC: LangGraph MAS + Profit Engine -->
+        <mxCell id="svc-group-langgraph" style="fillColor=#E0F2F1;strokeColor=#01A88D;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#01A88D;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Agentic Core" vertex="1" parent="vpc-1">
+          <mxGeometry x="270" y="310" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-langgraph" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#01A88D;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.generic_application;fontFamily=Helvetica;shadow=1;" value="LangGraph MAS&lt;div&gt;&lt;i&gt;Policy + Profit Engine&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-langgraph">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Column 3 Top inside VPC: Cloudera AI Inference Service -->
+        <mxCell id="svc-group-caii" style="fillColor=#E0F2F1;strokeColor=#01A88D;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#01A88D;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="AI Inference" vertex="1" parent="vpc-1">
+          <mxGeometry x="540" y="60" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-caii" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#01A88D;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_2;fontFamily=Helvetica;shadow=1;" value="Cloudera AI Inference&lt;div&gt;&lt;i&gt;Nemotron GPU + ONNX&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-caii">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Column 3 Middle inside VPC: CDW Impala Virtual Warehouse -->
+        <mxCell id="svc-group-impala" style="fillColor=#EDE7F6;strokeColor=#8C4FFF;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#8C4FFF;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Data Warehouse" vertex="1" parent="vpc-1">
+          <mxGeometry x="540" y="250" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-impala" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks;fontFamily=Helvetica;shadow=1;" value="CDW Impala VW&lt;div&gt;&lt;i&gt;HS2 HTTPS SQL&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-impala">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Column 3 Bottom inside VPC: Cloudera DataFlow -->
+        <mxCell id="svc-group-cdf" style="fillColor=#FCE4EC;strokeColor=#E7157B;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Event Streaming" vertex="1" parent="vpc-1">
+          <mxGeometry x="540" y="450" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-cdf" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.container_1;fontFamily=Helvetica;shadow=1;" value="Cloudera DataFlow&lt;div&gt;&lt;i&gt;NiFi Banking Events&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-cdf">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Column 4 Top inside VPC: Cloudera AI Registry -->
+        <mxCell id="svc-group-registry" style="fillColor=#F5E6F7;strokeColor=#C925D1;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#C925D1;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Model Registry" vertex="1" parent="vpc-1">
+          <mxGeometry x="760" y="60" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-registry" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.generic_database;fontFamily=Helvetica;shadow=1;" value="Cloudera AI Registry&lt;div&gt;&lt;i&gt;MLflow ONNX Models&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-registry">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Outside VPC inside AWS Cloud: Amazon S3 + Apache Iceberg v2 -->
+        <mxCell id="svc-group-s3" style="fillColor=#E8F5E9;strokeColor=#3F8624;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#3F8624;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Lakehouse Storage" vertex="1" parent="aws-cloud">
+          <mxGeometry x="1030" y="330" width="130" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-s3" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#3F8624;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fontFamily=Helvetica;shadow=1;" value="Amazon S3 + Iceberg v2&lt;div&gt;&lt;i&gt;customers, offers, outcomes&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-s3">
+          <mxGeometry x="41" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Auxiliary Services inside AWS Cloud: IAM / RAZ + Ranger -->
+        <mxCell id="aux-services-group" style="rounded=0;fillColor=none;strokeColor=#666666;dashed=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#666666;whiteSpace=wrap;html=1;container=1;pointerEvents=0;collapsible=0;fontFamily=Helvetica;" value="Auxiliary Services" vertex="1" parent="aws-cloud">
+          <mxGeometry x="1015" y="530" width="160" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-group-iam" style="fillColor=#FFEBEE;strokeColor=#DD344C;rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#DD344C;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;strokeWidth=1.5;" value="Security &amp;amp; Policy" vertex="1" parent="aux-services-group">
+          <mxGeometry x="20" y="30" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-iam" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management;fontFamily=Helvetica;shadow=1;" value="AWS IAM / RAZ&lt;div&gt;&lt;i&gt;+ Apache Ranger&lt;/i&gt;&lt;/div&gt;" vertex="1" parent="svc-group-iam">
+          <mxGeometry x="36" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <!-- Step 1: Advisors -> ALB + Knox -> Workbench UI -->
+        <mxCell id="edge-users-alb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;fontFamily=Helvetica;" edge="1" parent="1" source="users-advisors" target="svc-alb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-users-alb-label" value="HTTPS / SSO" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-users-alb">
+          <mxGeometry relative="1" x="-0.2" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-alb-workbench" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;fontFamily=Helvetica;" edge="1" parent="1" source="svc-alb" target="svc-workbench">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-alb-workbench-label" value="Proxy :8000" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-alb-workbench">
+          <mxGeometry relative="1" x="0" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 2: Workbench UI -> LangGraph MAS -->
+        <mxCell id="edge-workbench-langgraph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;startArrow=block;startFill=1;endFill=1;strokeColor=#545B64;fontFamily=Helvetica;" edge="1" parent="1" source="svc-workbench" target="svc-langgraph">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-workbench-langgraph-label" value="REST + Analytics" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-workbench-langgraph">
+          <mxGeometry relative="1" x="0" y="0" as="geometry">
+            <mxPoint x="46" as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 3: LangGraph MAS -> Cloudera AI Inference + Registry -> CAII -->
+        <mxCell id="edge-langgraph-caii" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;fontFamily=Helvetica;exitX=1;exitY=0.25;entryX=0;entryY=0.5;" edge="1" parent="1" source="svc-langgraph" target="svc-caii">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="730" y="572" />
+              <mxPoint x="730" y="334" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-langgraph-caii-label" value="OpenAI + Open Inference v2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-langgraph-caii">
+          <mxGeometry relative="1" x="0.3" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-registry-caii" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;dashed=1;fontFamily=Helvetica;" edge="1" parent="1" source="svc-registry" target="svc-caii">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-registry-caii-label" value="deploy ONNX" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=2;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-registry-caii">
+          <mxGeometry relative="1" x="0" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 4: LangGraph MAS -> CDW Impala Virtual Warehouse -->
+        <mxCell id="edge-langgraph-impala" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;startArrow=block;startFill=1;endFill=1;strokeColor=#545B64;fontFamily=Helvetica;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="svc-langgraph" target="svc-impala">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="755" y="584" />
+              <mxPoint x="755" y="524" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-langgraph-impala-label" value="Impyla / cml.data_v1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-langgraph-impala">
+          <mxGeometry relative="1" x="-0.2" y="14" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 5: CDW Impala -> Amazon S3 Apache Iceberg v2 -->
+        <mxCell id="edge-impala-s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;startArrow=block;startFill=1;endFill=1;strokeColor=#545B64;fontFamily=Helvetica;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="svc-impala" target="svc-s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-impala-s3-label" value="Iceberg v2 Read / Update" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-impala-s3">
+          <mxGeometry relative="1" x="0.1" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 6: Cloudera DataFlow -> Iceberg S3 & Workbench Event API -->
+        <mxCell id="edge-cdf-s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;dashed=1;fontFamily=Helvetica;exitX=1;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="svc-cdf" target="svc-s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1325" y="724" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-cdf-s3-label" value="PutIceberg / Event Triggers" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=2;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-cdf-s3">
+          <mxGeometry relative="1" x="-0.1" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 7: LangGraph MAS -> LangSmith -->
+        <mxCell id="edge-langgraph-langsmith" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;dashed=1;fontFamily=Helvetica;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="svc-langgraph" target="svc-langsmith">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-langgraph-langsmith-label" value="OTel Traces &amp;amp; Thumbs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Helvetica;labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-langgraph-langsmith">
+          <mxGeometry relative="1" x="0.15" y="-12" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- On-Diagram Step Badges (28x28 Teal #007CBD) -->
+        <mxCell id="step-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="1" vertex="1" parent="1">
+          <mxGeometry x="182" y="305" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="step-2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="2" vertex="1" parent="1">
+          <mxGeometry x="562" y="425" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="step-3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="3" vertex="1" parent="1">
+          <mxGeometry x="692" y="390" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="step-4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="4" vertex="1" parent="1">
+          <mxGeometry x="692" y="545" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="step-5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="5" vertex="1" parent="1">
+          <mxGeometry x="965" y="485" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="step-6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="6" vertex="1" parent="1">
+          <mxGeometry x="965" y="685" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="step-7" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=16;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="7" vertex="1" parent="1">
+          <mxGeometry x="495" y="555" width="28" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- Right Sidebar Step Legend -->
+        <mxCell id="legend-bg" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.rect;fillColor2=none;strokeWidth=1;size=20;indent=5;fillColor=light-dark(#EDF3FF,#305363);strokeColor=#6c8ebf;fontFamily=Helvetica;" value="" vertex="1" parent="1">
+          <mxGeometry x="1500" y="30" width="650" height="870" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-container" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="1">
+          <mxGeometry x="1520" y="55" width="610" height="820" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-1-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="0" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-1-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="1" vertex="1" parent="step-1-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-1-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;Advisor &amp;amp; Customer SSO Ingress&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- Branch Advisors and mobile customers connect over HTTPS via AWS ALB and Cloudera Knox SSO to the Cloudera AI Application.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-1-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-2-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="100" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-2-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="2" vertex="1" parent="step-2-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-2-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;Dual-View Workbench &amp;amp; LangGraph MAS&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- FastAPI serves the 3-column Advisor Workbench and Portfolio Analytics UI, delegating chat and NBA scoring to LangGraph.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-2-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-3-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="200" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-3-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="3" vertex="1" parent="step-3-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-3-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;Cloudera AI Inference &amp;amp; Model Registry&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- LangGraph calls Nemotron on GPU nodes (OpenAI API) and optional ONNX customer-risk classifiers promoted from Cloudera AI Registry.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-3-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-4-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="300" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-4-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="4" vertex="1" parent="step-4-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-4-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;Policy &amp;amp; Expected Profit SQL via CDW Impala&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- Customer 360 dossiers, cohort filters, and 10k-book portfolio analytics execute over TLS against a CDW Impala Virtual Warehouse.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-4-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-5-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="400" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-5-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="5" vertex="1" parent="step-5-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-5-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;Apache Iceberg v2 Lakehouse on Amazon S3&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- Stores ACID Iceberg v2 tables (customers, offers, offer_outcomes) in Amazon S3, authorized by Apache Ranger and AWS IAM / RAZ.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-5-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-6-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="500" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-6-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="6" vertex="1" parent="step-6-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-6-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;Real-Time Cloudera DataFlow Triggers&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- NiFi flows stream deposit, card-spend, and DNS opt-out events into Iceberg v2 or POST /api/events/simulate for instant re-ranking.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-6-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-7-legend" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="legend-container">
+          <mxGeometry y="600" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="step-7-badge-legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007CBD;strokeColor=default;fontColor=#FFFFFF;fontStyle=1;fontSize=22;labelBackgroundColor=none;fontFamily=Helvetica;shadow=1;glass=0;strokeWidth=2;" value="7" vertex="1" parent="step-7-legend">
+          <mxGeometry y="2" width="40" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="step-7-desc-legend" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=14;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" value="&lt;div&gt;&lt;b&gt;LangSmith Tracing &amp;amp; Golden-Set Evaluation&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0,0,0), rgb(255,255,255));&quot;&gt;- Captures per-turn root runs, thread grouping, advisor/user thumbs feedback, and offline Nemotron LLM-as-judge evaluations.&lt;/span&gt;&lt;/div&gt;" vertex="1" parent="step-7-legend">
+          <mxGeometry x="52" width="548" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aux-note-legend" style="text;html=1;align=left;verticalAlign=top;fontSize=12;fontStyle=2;fontFamily=Helvetica;labelBackgroundColor=none;whiteSpace=wrap;" value="&lt;span style=&quot;color: light-dark(rgb(60,60,60), rgb(220,220,220));&quot;&gt;Auxiliary governance: AWS IAM, Cloudera Ranger, and AWS RAZ enforce fine-grained table and S3 bucket access across CDW and Cloudera AI.&lt;/span&gt;" vertex="1" parent="legend-container">
+          <mxGeometry y="715" width="590" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

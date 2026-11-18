@@ -787,11 +787,30 @@ def run_turn(
 # Demo customer slate (served to the web UI by app/server.py)
 # ----------------------------------------------------------------------
 
-def demo_customer_picks(limit: int = 25) -> List[Dict[str, Any]]:
-    """Return curated hackathon personas (IDs 1..6) plus diverse synthetic book."""
+def demo_customer_picks(
+    limit: int = 25,
+    segment: Optional[str] = None,
+    offer_id: Optional[str] = None,
+    profitable_only: bool = False,
+    channel: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Return curated hackathon personas (IDs 1..6) or a cohort-filtered customer slate."""
+    from offer_rules import filter_portfolio_customers
+
     conn = get_conn()
     try:
         init_schema(conn)
+        seed_offers(conn)
+        if segment or offer_id or profitable_only:
+            return filter_portfolio_customers(
+                conn,
+                segment=segment,
+                offer_id=offer_id,
+                profitable_only=profitable_only,
+                channel_override=channel,
+                limit=limit,
+            )
+
         rows = conn.execute(
             """
             SELECT customer_id, full_name, risk_tier, annual_income,

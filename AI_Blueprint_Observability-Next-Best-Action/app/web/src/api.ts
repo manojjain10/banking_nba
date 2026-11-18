@@ -58,6 +58,72 @@ export interface Customer {
   do_not_solicit?: number;
 }
 
+export interface CustomerFilterParams {
+  segment?: string;
+  offer_id?: string;
+  profitable_only?: boolean;
+  channel?: "BANKER_DESKTOP" | "IN_APP";
+  limit?: number;
+}
+
+export interface PortfolioKpis {
+  total_customers: number;
+  policy_cleared_customers: number;
+  suppressed_customers: number;
+  suppressed_pct: number;
+  profitable_customers: number;
+  profitable_pct: number;
+  total_expected_profit: number;
+  avg_profit_per_targeted: number;
+}
+
+export interface FunnelStage {
+  stage_id: string;
+  label: string;
+  count: number;
+  pct_of_book: number;
+  dropped_count: number;
+  drop_reason: string;
+}
+
+export interface SegmentAnalytics {
+  segment: string;
+  label: string;
+  total_customers: number;
+  risk_counts: {
+    LOW: number;
+    MED: number;
+    HIGH: number;
+  };
+  profitable_customers: number;
+  suppressed_customers: number;
+  unprofitable_customers: number;
+  profitable_pct: number;
+  total_expected_profit: number;
+  avg_expected_profit: number;
+}
+
+export interface OfferAnalytics {
+  offer_id: string;
+  offer_name: string;
+  product_category: string;
+  target_risk_tier: string;
+  primary_target_count: number;
+  eligible_profitable_count: number;
+  total_expected_profit: number;
+  avg_expected_profit: number;
+  avg_propensity_pct: number;
+}
+
+export interface PortfolioAnalyticsResponse {
+  channel: "BANKER_DESKTOP" | "IN_APP";
+  contact_cost: number;
+  kpis: PortfolioKpis;
+  funnel: FunnelStage[];
+  segments: SegmentAnalytics[];
+  offers: OfferAnalytics[];
+}
+
 export interface TurnResponse {
   run_id: string | null;
   assistant_message: string;
@@ -103,8 +169,28 @@ export async function fetchConfig(): Promise<AppConfig> {
   return requestJson<AppConfig>("/api/config");
 }
 
-export async function fetchCustomers(): Promise<Customer[]> {
-  return requestJson<Customer[]>("/api/customers");
+export async function fetchCustomers(
+  params?: CustomerFilterParams,
+): Promise<Customer[]> {
+  if (!params) {
+    return requestJson<Customer[]>("/api/customers");
+  }
+  const qs = new URLSearchParams();
+  if (params.segment) qs.set("segment", params.segment);
+  if (params.offer_id) qs.set("offer_id", params.offer_id);
+  if (params.profitable_only) qs.set("profitable_only", "true");
+  if (params.channel) qs.set("channel", params.channel);
+  if (typeof params.limit === "number") qs.set("limit", String(params.limit));
+  const suffix = qs.toString();
+  return requestJson<Customer[]>(suffix ? `/api/customers?${suffix}` : "/api/customers");
+}
+
+export async function fetchPortfolioAnalytics(
+  channel: "BANKER_DESKTOP" | "IN_APP" = "BANKER_DESKTOP",
+): Promise<PortfolioAnalyticsResponse> {
+  return requestJson<PortfolioAnalyticsResponse>(
+    `/api/analytics/portfolio?channel=${encodeURIComponent(channel)}`,
+  );
 }
 
 export async function postTurn(

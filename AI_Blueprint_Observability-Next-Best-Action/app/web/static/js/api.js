@@ -33,8 +33,26 @@ async function requestJson(url, init) {
 export async function fetchConfig() {
     return requestJson("/api/config");
 }
-export async function fetchCustomers() {
-    return requestJson("/api/customers");
+export async function fetchCustomers(params) {
+    if (!params) {
+        return requestJson("/api/customers");
+    }
+    const qs = new URLSearchParams();
+    if (params.segment)
+        qs.set("segment", params.segment);
+    if (params.offer_id)
+        qs.set("offer_id", params.offer_id);
+    if (params.profitable_only)
+        qs.set("profitable_only", "true");
+    if (params.channel)
+        qs.set("channel", params.channel);
+    if (typeof params.limit === "number")
+        qs.set("limit", String(params.limit));
+    const suffix = qs.toString();
+    return requestJson(suffix ? `/api/customers?${suffix}` : "/api/customers");
+}
+export async function fetchPortfolioAnalytics(channel = "BANKER_DESKTOP") {
+    return requestJson(`/api/analytics/portfolio?channel=${encodeURIComponent(channel)}`);
 }
 export async function postTurn(message, threadId, customerId) {
     const data = await requestJson("/api/turn", {

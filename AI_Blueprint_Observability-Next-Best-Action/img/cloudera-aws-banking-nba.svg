@@ -1,0 +1,301 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 760" width="1560" height="760" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Governed Banking Next-Best-Action Architecture on Cloudera on AWS</title>
+  <desc id="arch-desc">High-level Cloudera on AWS reference architecture connecting Branch Advisors and Customers through AWS ALB and Knox SSO to the Cloudera AI Workbench Application, LangGraph Multi-Agent System, Cloudera AI Inference Service, CDW Impala Virtual Warehouse, Amazon S3 Apache Iceberg v2 tables, Cloudera DataFlow, and LangSmith Observability.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#475569" />
+    </marker>
+    <filter id="cardShadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect x="0" y="0" width="1560" height="760" rx="12" fill="#FFFFFF" />
+
+  <!-- Header Block -->
+  <text x="32" y="40" font-family="Helvetica, Arial, sans-serif" font-size="25" font-weight="700" fill="#16191F">
+    Governed Banking Next-Best-Action on Cloudera on AWS
+  </text>
+  <text x="32" y="63" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#545B64">
+    Advisor Workbench, Portfolio Risk &amp; Profit Analytics, LangGraph MAS, Cloudera AI Inference &amp; CDW Impala Apache Iceberg v2
+  </text>
+  <line x1="32" y1="76" x2="1528" y2="76" stroke="#FF9900" stroke-width="2.5" />
+
+  <!-- ==================== EXTERNAL ACTORS (LEFT) ==================== -->
+  <!-- Advisors & Customers -->
+  <g filter="url(#cardShadow)">
+    <rect x="28" y="232" width="144" height="122" rx="8" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+    <text x="100" y="252" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#1E293B">External Users</text>
+    <rect x="76" y="264" width="48" height="48" rx="8" fill="#232F3E" />
+    <circle cx="92" cy="282" r="6" fill="#FFFFFF" />
+    <path d="M81 301 C81 293, 103 293, 103 301" stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round" />
+    <circle cx="109" cy="284" r="5" fill="#CBD5E1" />
+    <path d="M101 301 C102 295, 117 295, 118 301" stroke="#CBD5E1" stroke-width="2.2" fill="none" stroke-linecap="round" />
+    <text x="100" y="328" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">Advisors &amp; Customers</text>
+    <text x="100" y="342" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">Branch UI &amp; In-App</text>
+  </g>
+
+  <!-- LangSmith Observability -->
+  <g filter="url(#cardShadow)">
+    <rect x="28" y="468" width="144" height="126" rx="8" fill="#FCE4EC" stroke="#E7157B" stroke-width="1.5" />
+    <text x="100" y="488" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#C2185B">LLM Observability</text>
+    <rect x="76" y="500" width="48" height="48" rx="8" fill="#E7157B" />
+    <polyline points="83,529 93,519 101,526 115,510" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="115" cy="510" r="3" fill="#FFFFFF" />
+    <text x="100" y="565" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">LangSmith</text>
+    <text x="100" y="579" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">Traces, Threads &amp; Evals</text>
+  </g>
+
+  <!-- ==================== AWS CLOUD & REGION & VPC ==================== -->
+  <!-- AWS Cloud Outer Box -->
+  <rect x="214" y="96" width="916" height="638" rx="8" fill="#F8FAFC" fill-opacity="0.65" stroke="#232F3E" stroke-width="2" />
+  <rect x="214" y="96" width="28" height="24" rx="4" fill="#232F3E" />
+  <text x="228" y="112" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#FF9900">AWS</text>
+  <text x="252" y="114" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#232F3E">
+    AWS Cloud &#8212; Cloudera Data Platform (CDP) Public Cloud
+  </text>
+
+  <!-- AWS Region Dashed Box -->
+  <rect x="230" y="128" width="884" height="590" rx="6" fill="#0C7B7D" fill-opacity="0.03" stroke="#00A4A6" stroke-width="1.5" stroke-dasharray="6,4" />
+  <text x="246" y="147" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#007E80">
+    AWS Region (e.g., us-east-1)
+  </text>
+
+  <!-- CDP Environment VPC -->
+  <rect x="246" y="160" width="684" height="542" rx="6" fill="#8C4FFF" fill-opacity="0.035" stroke="#8C4FFF" stroke-width="1.6" />
+  <text x="262" y="180" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#6D28D9">
+    CDP Environment VPC (Amazon EKS Private Subnets)
+  </text>
+
+  <!-- ==================== SERVICE CONTAINERS INSIDE VPC ==================== -->
+  <!-- 1. Ingress: AWS ALB + Cloudera Knox -->
+  <g filter="url(#cardShadow)">
+    <rect x="264" y="232" width="132" height="122" rx="8" fill="#EDE7F6" stroke="#8C4FFF" stroke-width="1.5" />
+    <text x="330" y="251" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#6D28D9">Ingress &amp; SSO</text>
+    <rect x="306" y="262" width="48" height="46" rx="8" fill="#8C4FFF" />
+    <circle cx="320" cy="285" r="5" fill="#FFFFFF" />
+    <circle cx="341" cy="275" r="4" fill="#FFFFFF" />
+    <circle cx="341" cy="295" r="4" fill="#FFFFFF" />
+    <line x1="325" y1="283" x2="337" y2="276" stroke="#FFFFFF" stroke-width="2" />
+    <line x1="325" y1="287" x2="337" y2="294" stroke="#FFFFFF" stroke-width="2" />
+    <text x="330" y="325" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">AWS ALB + Knox</text>
+    <text x="330" y="339" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">TLS / SAML SSO</text>
+  </g>
+
+  <!-- 2. Cloudera AI Workbench Application (FastAPI + UI) -->
+  <g filter="url(#cardShadow)">
+    <rect x="442" y="232" width="142" height="122" rx="8" fill="#FFF2E8" stroke="#ED7100" stroke-width="1.5" />
+    <text x="513" y="251" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#C2410C">Cloudera AI App</text>
+    <rect x="489" y="262" width="48" height="46" rx="8" fill="#ED7100" />
+    <rect x="498" y="271" width="30" height="28" rx="3" fill="none" stroke="#FFFFFF" stroke-width="2.2" />
+    <line x1="498" y1="279" x2="528" y2="279" stroke="#FFFFFF" stroke-width="2" />
+    <text x="513" y="325" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">NBA Workbench UI</text>
+    <text x="513" y="339" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">FastAPI + Portfolio SVG</text>
+  </g>
+
+  <!-- 3. LangGraph MAS + Profit Engine -->
+  <g filter="url(#cardShadow)">
+    <rect x="442" y="468" width="142" height="126" rx="8" fill="#E0F2F1" stroke="#01A88D" stroke-width="1.5" />
+    <text x="513" y="487" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#0F766E">Agentic Core</text>
+    <rect x="489" y="498" width="48" height="46" rx="8" fill="#01A88D" />
+    <circle cx="503" cy="513" r="4.5" fill="#FFFFFF" />
+    <circle cx="523" cy="513" r="4.5" fill="#FFFFFF" />
+    <circle cx="513" cy="531" r="4.5" fill="#FFFFFF" />
+    <line x1="507" y1="513" x2="519" y2="513" stroke="#FFFFFF" stroke-width="2" />
+    <line x1="505" y1="517" x2="511" y2="527" stroke="#FFFFFF" stroke-width="2" />
+    <line x1="521" y1="517" x2="515" y2="527" stroke="#FFFFFF" stroke-width="2" />
+    <text x="513" y="562" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">LangGraph MAS</text>
+    <text x="513" y="576" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">Policy + Profit Engine</text>
+  </g>
+
+  <!-- 4. Cloudera AI Inference Service (CAII) -->
+  <g filter="url(#cardShadow)">
+    <rect x="638" y="198" width="136" height="122" rx="8" fill="#E0F2F1" stroke="#01A88D" stroke-width="1.5" />
+    <text x="706" y="217" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#0F766E">AI Inference</text>
+    <rect x="682" y="228" width="48" height="46" rx="8" fill="#01A88D" />
+    <rect x="693" y="239" width="26" height="24" rx="4" fill="none" stroke="#FFFFFF" stroke-width="2.2" />
+    <circle cx="706" cy="251" r="4.5" fill="#FFFFFF" />
+    <text x="706" y="291" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.2" font-weight="700" fill="#16191F">Cloudera AI Inference</text>
+    <text x="706" y="305" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">Nemotron GPU + ONNX</text>
+  </g>
+
+  <!-- 5. Cloudera AI Registry -->
+  <g filter="url(#cardShadow)">
+    <rect x="786" y="198" width="130" height="122" rx="8" fill="#F5E6F7" stroke="#C925D1" stroke-width="1.5" />
+    <text x="851" y="217" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#A21CAF">Model Registry</text>
+    <rect x="827" y="228" width="48" height="46" rx="8" fill="#C925D1" />
+    <ellipse cx="851" cy="241" rx="13" ry="5" fill="none" stroke="#FFFFFF" stroke-width="2" />
+    <path d="M838 241 V260 C838 263, 864 263, 864 260 V241" fill="none" stroke="#FFFFFF" stroke-width="2" />
+    <text x="851" y="291" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.2" font-weight="700" fill="#16191F">Cloudera AI Registry</text>
+    <text x="851" y="305" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">MLflow ONNX Models</text>
+  </g>
+
+  <!-- 6. CDW Impala Virtual Warehouse -->
+  <g filter="url(#cardShadow)">
+    <rect x="652" y="376" width="144" height="122" rx="8" fill="#EDE7F6" stroke="#8C4FFF" stroke-width="1.5" />
+    <text x="724" y="395" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#6D28D9">Data Warehouse</text>
+    <rect x="700" y="406" width="48" height="46" rx="8" fill="#8C4FFF" />
+    <rect x="710" y="416" width="28" height="8" rx="2" fill="#FFFFFF" />
+    <rect x="710" y="427" width="28" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.85" />
+    <rect x="710" y="438" width="28" height="6" rx="2" fill="#FFFFFF" fill-opacity="0.7" />
+    <text x="724" y="469" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">CDW Impala VW</text>
+    <text x="724" y="483" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">HS2 HTTPS SQL</text>
+  </g>
+
+  <!-- 7. Cloudera DataFlow (CDF) -->
+  <g filter="url(#cardShadow)">
+    <rect x="652" y="556" width="144" height="124" rx="8" fill="#FCE4EC" stroke="#E7157B" stroke-width="1.5" />
+    <text x="724" y="575" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#C2185B">Event Streaming</text>
+    <rect x="700" y="586" width="48" height="46" rx="8" fill="#E7157B" />
+    <path d="M709 603 H735 M729 597 L736 603 L729 609" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M709 616 H739 M733 610 L740 616 L733 622" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="724" y="649" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#16191F">Cloudera DataFlow</text>
+    <text x="724" y="663" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">NiFi Real-Time Triggers</text>
+  </g>
+
+  <!-- ==================== OUTSIDE VPC IN AWS CLOUD ==================== -->
+  <!-- 8. Amazon S3 + Apache Iceberg v2 -->
+  <g filter="url(#cardShadow)">
+    <rect x="952" y="376" width="144" height="126" rx="8" fill="#E8F5E9" stroke="#3F8624" stroke-width="1.5" />
+    <text x="1024" y="395" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#2E7D32">Lakehouse Storage</text>
+    <rect x="1000" y="406" width="48" height="46" rx="8" fill="#3F8624" />
+    <path d="M1011 416 H1037 L1034 442 H1014 Z" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round" />
+    <ellipse cx="1024" cy="416" rx="13" ry="3.5" fill="#3F8624" stroke="#FFFFFF" stroke-width="2" />
+    <text x="1024" y="469" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.2" font-weight="700" fill="#16191F">Amazon S3 + Iceberg v2</text>
+    <text x="1024" y="483" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.2" font-style="italic" fill="#545B64">customers, offers, outcomes</text>
+  </g>
+
+  <!-- 9. Auxiliary Governance: IAM / RAZ + Ranger -->
+  <rect x="946" y="532" width="156" height="164" rx="4" fill="none" stroke="#64748B" stroke-width="1.3" stroke-dasharray="5,4" />
+  <text x="1024" y="549" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#475569">Auxiliary Governance</text>
+  <g filter="url(#cardShadow)">
+    <rect x="958" y="558" width="132" height="124" rx="8" fill="#FFEBEE" stroke="#DD344C" stroke-width="1.5" />
+    <text x="1024" y="576" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#B91C1C">Security &amp; Policy</text>
+    <rect x="1000" y="586" width="48" height="46" rx="8" fill="#DD344C" />
+    <path d="M1024 594 L1037 600 V611 C1037 619, 1031 624, 1024 627 C1017 624, 1011 619, 1011 611 V600 Z" fill="none" stroke="#FFFFFF" stroke-width="2.2" />
+    <text x="1024" y="649" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10.2" font-weight="700" fill="#16191F">AWS IAM / RAZ</text>
+    <text x="1024" y="663" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#545B64">+ Apache Ranger</text>
+  </g>
+
+  <!-- ==================== CONNECTORS & STEP BADGES ==================== -->
+  <!-- Step 1: Users -> ALB -> Workbench -->
+  <line x1="172" y1="293" x2="262" y2="293" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="217" y="285" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10" fill="#334155">HTTPS / SSO</text>
+
+  <line x1="396" y1="293" x2="440" y2="293" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- Step 2: Workbench <-> LangGraph MAS -->
+  <line x1="513" y1="356" x2="513" y2="466" stroke="#475569" stroke-width="1.8" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text x="559" y="415" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10" fill="#334155">REST + Charts</text>
+
+  <!-- Step 3: LangGraph -> CAII & Registry -> CAII -->
+  <path d="M 584 495 L 614 495 L 614 259 L 636 259" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)" />
+  <line x1="786" y1="259" x2="776" y2="259" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,3" marker-end="url(#arrow)" />
+
+  <!-- Step 4: LangGraph <-> CDW Impala -->
+  <path d="M 584 522 L 626 522 L 626 437 L 650 437" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+
+  <!-- Step 5: CDW Impala <-> Amazon S3 Iceberg -->
+  <line x1="796" y1="437" x2="950" y2="437" stroke="#475569" stroke-width="1.8" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text x="873" y="427" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10" fill="#334155">Iceberg v2 R/W</text>
+
+  <!-- Step 6: CDF -> Iceberg & Workbench Event API -->
+  <path d="M 796 618 L 920 618 L 920 468 L 950 468" fill="none" stroke="#475569" stroke-width="1.7" stroke-dasharray="5,4" marker-end="url(#arrow)" />
+  <path d="M 652 618 L 513 618 L 513 596" fill="none" stroke="#475569" stroke-width="1.7" stroke-dasharray="5,4" marker-end="url(#arrow)" />
+  <text x="585" y="633" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9.5" font-style="italic" fill="#475569">/api/events/simulate</text>
+
+  <!-- Step 7: LangGraph -> LangSmith -->
+  <line x1="442" y1="531" x2="174" y2="531" stroke="#475569" stroke-width="1.8" stroke-dasharray="5,4" marker-end="url(#arrow)" />
+  <text x="315" y="522" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10" fill="#334155">OTel Traces &amp; Feedback</text>
+
+  <!-- Teal Step Badges on Diagram -->
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">
+    <rect x="178" y="252" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="190" y="269">1</text>
+
+    <rect x="480" y="396" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="492" y="413">2</text>
+
+    <rect x="602" y="318" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="614" y="335">3</text>
+
+    <rect x="614" y="468" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="626" y="485">4</text>
+
+    <rect x="861" y="394" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="873" y="411">5</text>
+
+    <rect x="808" y="588" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="820" y="605">6</text>
+
+    <rect x="398" y="497" width="24" height="24" rx="5" fill="#007CBD" />
+    <text x="410" y="514">7</text>
+  </g>
+
+  <!-- ==================== RIGHT SIDEBAR LEGEND ==================== -->
+  <rect x="1148" y="96" width="384" height="638" rx="8" fill="#EDF3FF" stroke="#6C8EBF" stroke-width="1.4" />
+  <text x="1168" y="124" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1E293B">
+    End-to-End Architecture Flow
+  </text>
+  <line x1="1168" y1="134" x2="1512" y2="134" stroke="#CBD5E1" stroke-width="1" />
+
+  <!-- Step 1 Legend -->
+  <rect x="1168" y="148" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="167" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">1</text>
+  <text x="1208" y="160" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Advisor &amp; Customer SSO Ingress</text>
+  <text x="1208" y="176" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">HTTPS traffic routes via AWS ALB and Cloudera Knox</text>
+  <text x="1208" y="190" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">SSO to the Cloudera AI Application container.</text>
+
+  <!-- Step 2 Legend -->
+  <rect x="1168" y="224" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="243" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">2</text>
+  <text x="1208" y="236" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Dual-View Workbench &amp; LangGraph MAS</text>
+  <text x="1208" y="252" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">FastAPI serves the 3-column Advisor Workbench and</text>
+  <text x="1208" y="266" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">Portfolio SVG charts over the LangGraph agentic core.</text>
+
+  <!-- Step 3 Legend -->
+  <rect x="1168" y="300" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="319" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">3</text>
+  <text x="1208" y="312" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Cloudera AI Inference &amp; Registry</text>
+  <text x="1208" y="328" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">Invokes Nemotron on GPU nodes (OpenAI API) and</text>
+  <text x="1208" y="342" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">optional ONNX risk models from Cloudera AI Registry.</text>
+
+  <!-- Step 4 Legend -->
+  <rect x="1168" y="376" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="395" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">4</text>
+  <text x="1208" y="388" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Governed SQL via CDW Impala VW</text>
+  <text x="1208" y="404" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">Customer 360 dossiers, cohort filters, and 10k-book</text>
+  <text x="1208" y="418" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">analytics run over TLS on a CDW Impala Warehouse.</text>
+
+  <!-- Step 5 Legend -->
+  <rect x="1168" y="452" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="471" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">5</text>
+  <text x="1208" y="464" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Apache Iceberg v2 on Amazon S3</text>
+  <text x="1208" y="480" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">ACID Iceberg v2 tables (customers, offers, outcomes)</text>
+  <text x="1208" y="494" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">stored in S3 and governed by Ranger + AWS RAZ.</text>
+
+  <!-- Step 6 Legend -->
+  <rect x="1168" y="528" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="547" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">6</text>
+  <text x="1208" y="540" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Real-Time Cloudera DataFlow Events</text>
+  <text x="1208" y="556" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">NiFi flows stream deposit, card-spend, and opt-out</text>
+  <text x="1208" y="570" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">triggers into Iceberg or /api/events/simulate.</text>
+
+  <!-- Step 7 Legend -->
+  <rect x="1168" y="604" width="30" height="28" rx="6" fill="#007CBD" />
+  <text x="1183" y="623" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">7</text>
+  <text x="1208" y="616" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">LangSmith Tracing &amp; Evaluation</text>
+  <text x="1208" y="632" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">Streams nested turn traces, thread IDs, thumbs</text>
+  <text x="1208" y="646" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#334155">feedback, and offline LLM-as-judge benchmarks.</text>
+
+  <!-- Footer Note in Legend -->
+  <line x1="1168" y1="670" x2="1512" y2="670" stroke="#CBD5E1" stroke-width="1" />
+  <text x="1168" y="692" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-style="italic" fill="#475569">
+    Solid lines: synchronous request / SQL paths
+  </text>
+  <text x="1168" y="708" font-family="Helvetica, Arial, sans-serif" font-size="10.5" font-style="italic" fill="#475569">
+    Dashed lines: async event, telemetry &amp; MLOps promotion
+  </text>
+</svg>
