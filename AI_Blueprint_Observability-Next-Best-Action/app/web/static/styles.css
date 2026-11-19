@@ -72,8 +72,12 @@ body {
 }
 
 .topbar__mark {
-  color: var(--primary);
-  font-size: 18px;
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .search-combo {

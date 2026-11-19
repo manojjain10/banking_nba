@@ -45,6 +45,7 @@ from nba_app import (
 log = logging.getLogger("nba.server")
 
 _STATIC_DIR = Path(__file__).parent / "web" / "static"
+_IMG_DIR = Path(__file__).resolve().parent.parent / "img"
 
 _PORTFOLIO_TTL_SEC = 60.0
 _PORTFOLIO_LOCK = threading.Lock()
@@ -549,6 +550,9 @@ async def _unhandled(request, exc: Exception) -> JSONResponse:  # noqa: ANN001
     log.exception("unhandled error on %s", request.url.path)
     return JSONResponse(status_code=500, content={"detail": str(exc)})
 
+
+if _IMG_DIR.is_dir():
+    app.mount("/img", StaticFiles(directory=str(_IMG_DIR)), name="img")
 
 if _STATIC_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="web")
