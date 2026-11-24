@@ -32,7 +32,14 @@ from fastapi.staticfiles import StaticFiles
 from langsmith import Client
 from pydantic import BaseModel, Field
 
-from db import describe_db_target, ensure_db_ready, get_conn, init_schema, seed_offers
+from db import (
+    describe_db_target,
+    ensure_db_ready,
+    get_conn,
+    init_schema,
+    qualify_table,
+    seed_offers,
+)
 from nba_app import (
     HIGH_RISK_THRESHOLD,
     LANGSMITH_ORG,
@@ -322,8 +329,9 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
     conn = get_conn()
     try:
         init_schema(conn)
+        customers_tbl = qualify_table("customers", conn)
         row = conn.execute(
-            "SELECT * FROM customers WHERE customer_id = ?", (req.customer_id,)
+            f"SELECT * FROM {customers_tbl} WHERE customer_id = ?", (req.customer_id,)
         ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail=f"Customer {req.customer_id} not found")
@@ -331,8 +339,8 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
         if req.event_type == "LARGE_DIRECT_DEPOSIT":
             delta = float(req.amount or 35_000.0)
             conn.execute(
-                """
-                UPDATE customers
+                f"""
+                UPDATE {customers_tbl}
                 SET avg_checking_balance = avg_checking_balance + ?,
                     customer_segment = 'Rate_Sensitive_Saver',
                     do_not_solicit = 0
@@ -346,8 +354,8 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
             )
         elif req.event_type == "HIGH_APR_CARD_SPEND":
             conn.execute(
-                """
-                UPDATE customers
+                f"""
+                UPDATE {customers_tbl}
                 SET existing_debt = existing_debt + 8500,
                     do_not_solicit = 0
                 WHERE customer_id = ?
@@ -360,8 +368,8 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
             )
         elif req.event_type == "WEALTH_PORTAL_VIEW":
             conn.execute(
-                """
-                UPDATE customers
+                f"""
+                UPDATE {customers_tbl}
                 SET avg_checking_balance = CASE
                         WHEN avg_checking_balance >= 65000 THEN avg_checking_balance
                         ELSE 65000
@@ -378,7 +386,7 @@ def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
             )
         else:  # DNS_OPT_OUT
             conn.execute(
-                "UPDATE customers SET do_not_solicit = 1 WHERE customer_id = ?",
+                f"UPDATE {customers_tbl} SET do_not_solicit = 1 WHERE customer_id = ?",
                 (req.customer_id,),
             )
             trigger_msg = "Hello, I'm checking in on my account options."
@@ -414,8 +422,9 @@ def get_customer_research_dossier(
     try:
         init_schema(conn)
         seed_offers(conn)
+        customers_tbl = qualify_table("customers", conn)
         row = conn.execute(
-            "SELECT * FROM customers WHERE customer_id = ?", (customer_id,)
+            f"SELECT * FROM {customers_tbl} WHERE customer_id = ?", (customer_id,)
         ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
@@ -514,9 +523,10 @@ def post_outcome(req: OutcomeRequest) -> OutcomeResponse:
     conn = get_conn()
     try:
         init_schema(conn)
+        outcomes_tbl = qualify_table("offer_outcomes", conn)
         conn.execute(
-            """
-            INSERT INTO offer_outcomes (
+            f"""
+            INSERT INTO {outcomes_tbl} (
                 customer_id, offer_id, outcome, channel, simulated_amount, recorded_at
             ) VALUES (?, ?, ?, ?, ?, ?)
             """,

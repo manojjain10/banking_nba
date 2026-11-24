@@ -34,7 +34,7 @@ from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from pydantic import BaseModel, Field
 
-from db import get_conn, init_schema, seed_offers
+from db import get_conn, init_schema, qualify_table, seed_offers
 from offer_rules import evaluate_governance_and_rank
 
 os.environ.setdefault("LANGSMITH_TRACING", "true")
@@ -333,9 +333,10 @@ def _load_customer(customer_id: Optional[int]) -> Dict[str, Any]:
     conn = get_conn()
     try:
         init_schema(conn)
+        customers_tbl = qualify_table("customers", conn)
         if customer_id is None:
             max_id_row = conn.execute(
-                "SELECT COALESCE(MAX(customer_id), 0) FROM customers"
+                f"SELECT COALESCE(MAX(customer_id), 0) FROM {customers_tbl}"
             ).fetchone()
             max_id = max_id_row[0] if max_id_row else 0
             if max_id == 0:
@@ -358,7 +359,7 @@ def _load_customer(customer_id: Optional[int]) -> Dict[str, Any]:
                 }
             customer_id = random.randint(1, max_id)
         row = conn.execute(
-            "SELECT * FROM customers WHERE customer_id = ?", (customer_id,)
+            f"SELECT * FROM {customers_tbl} WHERE customer_id = ?", (customer_id,)
         ).fetchone()
         if row is None:
             return {"customer_id": customer_id, "full_name": "Unknown", "risk_tier": "MED"}
@@ -811,13 +812,14 @@ def demo_customer_picks(
                 limit=limit,
             )
 
+        customers_tbl = qualify_table("customers", conn)
         rows = conn.execute(
-            """
+            f"""
             SELECT customer_id, full_name, risk_tier, annual_income,
                    employment_status, existing_debt, customer_segment,
                    avg_checking_balance, credit_score, current_products,
                    preferred_channel, do_not_solicit, last_contact_days_ago
-            FROM customers
+            FROM {customers_tbl}
             ORDER BY customer_id ASC
             LIMIT ?
             """,

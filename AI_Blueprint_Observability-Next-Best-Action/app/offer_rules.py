@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from db import get_offers
+from db import get_offers, qualify_table
 
 
 def _row_to_dict(row: Any, columns: Optional[Sequence[str]] = None) -> Dict[str, Any]:
@@ -346,14 +346,15 @@ def compute_portfolio_analytics(
     contact_cost = 0.50 if normalized_channel == "IN_APP" else 18.00
 
     all_offers = get_offers(conn)
+    customers_tbl = qualify_table("customers", conn)
     customers = _fetch_all_dicts(
         conn,
-        """
+        f"""
         SELECT customer_id, full_name, age, annual_income, employment_status,
                existing_debt, risk_tier, credit_score, avg_checking_balance,
                customer_segment, current_products, preferred_channel,
                do_not_solicit, last_contact_days_ago
-        FROM customers
+        FROM {customers_tbl}
         """,
     )
 
@@ -608,14 +609,15 @@ def filter_portfolio_customers(
         "IN_APP" if str(channel_override or "").upper() == "IN_APP" else "BANKER_DESKTOP"
     )
     all_offers = get_offers(conn)
+    customers_tbl = qualify_table("customers", conn)
     customers = _fetch_all_dicts(
         conn,
-        """
+        f"""
         SELECT customer_id, full_name, age, risk_tier, annual_income,
                employment_status, existing_debt, customer_segment,
                avg_checking_balance, credit_score, current_products,
                preferred_channel, do_not_solicit, last_contact_days_ago
-        FROM customers
+        FROM {customers_tbl}
         ORDER BY customer_id ASC
         """,
     )
@@ -660,7 +662,8 @@ if __name__ == "__main__":
     with get_conn() as conn:
         init_schema(conn)
         seed_offers(conn)
-        cust = conn.execute("SELECT * FROM customers WHERE customer_id = 2").fetchone()
+        customers_tbl = qualify_table("customers", conn)
+        cust = conn.execute(f"SELECT * FROM {customers_tbl} WHERE customer_id = 2").fetchone()
         ranked, suppressed = evaluate_governance_and_rank(
             conn, dict(cust), {"stated_goal": "earn better interest on my checking cash"}, top_k=3
         )

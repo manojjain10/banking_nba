@@ -28,6 +28,7 @@ echo " Cloudera on AWS Bootstrap — Governed Banking NBA (Iceberg + CDW)"
 echo " Project Root : ${PROJECT_ROOT}"
 echo " Python       : $(command -v "${PYTHON_BIN}")"
 echo " DB Backend   : ${NBA_DB_BACKEND:-impala}"
+echo " Impala DB    : ${IMPALA_DATABASE:-banking_nba}"
 echo "=================================================================="
 
 "${PYTHON_BIN}" "${SCRIPT_DIR}/install_dependencies.py"

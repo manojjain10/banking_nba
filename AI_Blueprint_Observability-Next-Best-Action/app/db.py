@@ -33,6 +33,13 @@ import threading
 import time
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except Exception:  # noqa: BLE001
+    pass
+
 log = logging.getLogger("nba.db")
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -82,7 +89,22 @@ def sanitize_identifier(name: str, default: str = "banking_nba") -> str:
 
 
 def get_impala_database() -> str:
-    return sanitize_identifier(os.environ.get("IMPALA_DATABASE", "banking_nba"))
+    """Resolve target Impala database from ``IMPALA_DATABASE`` (or ``NBA_DATABASE``)."""
+    raw = (
+        os.environ.get("IMPALA_DATABASE", "").strip()
+        or os.environ.get("NBA_DATABASE", "").strip()
+        or "banking_nba"
+    )
+    return sanitize_identifier(raw)
+
+
+def qualify_table(table_name: str, conn: Optional[Any] = None) -> str:
+    """Return ``<IMPALA_DATABASE>.<table>`` for Impala or ``<table>`` for SQLite."""
+    tbl = sanitize_identifier(table_name)
+    if is_impala_backend(conn):
+        db_name = getattr(conn, "database", None) or get_impala_database()
+        return f"{sanitize_identifier(db_name)}.{tbl}"
+    return tbl
 
 
 def get_db_backend() -> str:
@@ -753,73 +775,75 @@ CREATE INDEX IF NOT EXISTS idx_customers_risk ON customers(risk_tier);
 CREATE INDEX IF NOT EXISTS idx_customers_segment ON customers(customer_segment);
 """
 
-_IMPALA_ICEBERG_DDL: Tuple[str, ...] = (
-    """
-    CREATE TABLE IF NOT EXISTS customers (
-        customer_id           INT,
-        full_name             STRING,
-        email                 STRING,
-        phone_number          STRING,
-        street_address        STRING,
-        city                  STRING,
-        state                 STRING,
-        zip_code              STRING,
-        company               STRING,
-        job_title             STRING,
-        age                   INT,
-        annual_income         DOUBLE,
-        employment_status     STRING,
-        existing_debt         DOUBLE,
-        risk_tier             STRING,
-        credit_score          INT,
-        avg_checking_balance  DOUBLE,
-        customer_segment      STRING,
-        current_products      STRING,
-        preferred_channel     STRING,
-        do_not_solicit        INT,
-        last_contact_days_ago INT
+def _build_impala_iceberg_ddl(db_name: str) -> Tuple[str, ...]:
+    safe_db = sanitize_identifier(db_name)
+    return (
+        f"""
+        CREATE TABLE IF NOT EXISTS {safe_db}.customers (
+            customer_id           INT,
+            full_name             STRING,
+            email                 STRING,
+            phone_number          STRING,
+            street_address        STRING,
+            city                  STRING,
+            state                 STRING,
+            zip_code              STRING,
+            company               STRING,
+            job_title             STRING,
+            age                   INT,
+            annual_income         DOUBLE,
+            employment_status     STRING,
+            existing_debt         DOUBLE,
+            risk_tier             STRING,
+            credit_score          INT,
+            avg_checking_balance  DOUBLE,
+            customer_segment      STRING,
+            current_products      STRING,
+            preferred_channel     STRING,
+            do_not_solicit        INT,
+            last_contact_days_ago INT
+        )
+        STORED BY ICEBERG
+        TBLPROPERTIES ('format-version'='2')
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS {safe_db}.offers (
+            offer_id                     STRING,
+            offer_name                   STRING,
+            product_category             STRING,
+            target_risk_tier             STRING,
+            min_age                      INT,
+            max_age                      INT,
+            min_income                   DOUBLE,
+            min_credit_score             INT,
+            min_balance                  DOUBLE,
+            apr_range                    STRING,
+            rewards_summary              STRING,
+            marketing_hook               STRING,
+            cta_text                     STRING,
+            priority                     INT,
+            base_margin                  DOUBLE,
+            base_exposure                DOUBLE,
+            base_loss_rate               DOUBLE,
+            cannibalization_penalty      DOUBLE,
+            approved_compliance_template STRING
+        )
+        STORED BY ICEBERG
+        TBLPROPERTIES ('format-version'='2')
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS {safe_db}.offer_outcomes (
+            customer_id      INT,
+            offer_id         STRING,
+            outcome          STRING,
+            channel          STRING,
+            simulated_amount DOUBLE,
+            recorded_at      STRING
+        )
+        STORED BY ICEBERG
+        TBLPROPERTIES ('format-version'='2')
+        """,
     )
-    STORED BY ICEBERG
-    TBLPROPERTIES ('format-version'='2')
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS offers (
-        offer_id                     STRING,
-        offer_name                   STRING,
-        product_category             STRING,
-        target_risk_tier             STRING,
-        min_age                      INT,
-        max_age                      INT,
-        min_income                   DOUBLE,
-        min_credit_score             INT,
-        min_balance                  DOUBLE,
-        apr_range                    STRING,
-        rewards_summary              STRING,
-        marketing_hook               STRING,
-        cta_text                     STRING,
-        priority                     INT,
-        base_margin                  DOUBLE,
-        base_exposure                DOUBLE,
-        base_loss_rate               DOUBLE,
-        cannibalization_penalty      DOUBLE,
-        approved_compliance_template STRING
-    )
-    STORED BY ICEBERG
-    TBLPROPERTIES ('format-version'='2')
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS offer_outcomes (
-        customer_id      INT,
-        offer_id         STRING,
-        outcome          STRING,
-        channel          STRING,
-        simulated_amount DOUBLE,
-        recorded_at      STRING
-    )
-    STORED BY ICEBERG
-    TBLPROPERTIES ('format-version'='2')
-    """,
-)
 
 
 def _sqlite_conn_key(conn: sqlite3.Connection) -> str:
@@ -845,8 +869,9 @@ def _conn_cache_key(conn: Any) -> str:
 def init_schema(conn: Any, force: bool = False) -> None:
     """Create ``customers``, ``offers``, and ``offer_outcomes`` if missing.
 
-    Cached per target database within the process so repeated calls on HTTP
-    turns do not re-issue DDL to Hive Metastore / SQLite.
+    On Impala, explicitly creates ``<IMPALA_DATABASE>`` (if permitted) and
+    prefixes every Iceberg v2 table with ``<IMPALA_DATABASE>.`` so stateless
+    ``cml.data_v1`` cursors never create tables in ``default``.
     """
     cache_key = _conn_cache_key(conn)
     if not force and not cache_key.startswith("sqlite:memory:"):
@@ -856,15 +881,22 @@ def init_schema(conn: Any, force: bool = False) -> None:
                 if not cache_key.startswith("sqlite:") or os.path.exists(cache_key[7:]):
                     return
 
-    if is_impala_backend(conn):
-        for ddl in _IMPALA_ICEBERG_DDL:
-            conn.execute(ddl)
-        conn.commit()
-    elif isinstance(conn, sqlite3.Connection):
+    if isinstance(conn, sqlite3.Connection):
         conn.executescript(_SQLITE_DDL)
         conn.commit()
     else:
-        for ddl in _IMPALA_ICEBERG_DDL:
+        db_name = getattr(conn, "database", None) or get_impala_database()
+        safe_db = sanitize_identifier(db_name)
+        try:
+            conn.execute(f"CREATE DATABASE IF NOT EXISTS {safe_db}")
+        except Exception as exc:  # noqa: BLE001
+            log.warning(
+                "CREATE DATABASE IF NOT EXISTS %s skipped/denied (continuing with %s.* tables): %s",
+                safe_db,
+                safe_db,
+                exc,
+            )
+        for ddl in _build_impala_iceberg_ddl(safe_db):
             conn.execute(ddl)
         if hasattr(conn, "commit"):
             conn.commit()
@@ -1036,15 +1068,16 @@ def seed_offers(conn: Any, force: bool = False) -> int:
                     return len(_OFFERS)
 
     cols = list(_OFFERS[0].keys())
+    offers_tbl = qualify_table("offers", conn)
 
     if isinstance(conn, sqlite3.Connection):
         placeholders = ",".join(f":{c}" for c in cols)
-        sql = f"INSERT OR IGNORE INTO offers ({','.join(cols)}) VALUES ({placeholders})"
+        sql = f"INSERT OR IGNORE INTO {offers_tbl} ({','.join(cols)}) VALUES ({placeholders})"
         conn.executemany(sql, _OFFERS)
         conn.commit()
-        count = int(conn.execute("SELECT COUNT(*) FROM offers").fetchone()[0])
+        count = int(conn.execute(f"SELECT COUNT(*) FROM {offers_tbl}").fetchone()[0])
     else:
-        existing_rows = conn.execute("SELECT offer_id FROM offers").fetchall()
+        existing_rows = conn.execute(f"SELECT offer_id FROM {offers_tbl}").fetchall()
         existing_ids = {str(r[0]) for r in existing_rows}
         missing = [o for o in _OFFERS if o["offer_id"] not in existing_ids]
         if missing:
@@ -1053,7 +1086,7 @@ def seed_offers(conn: Any, force: bool = False) -> int:
                 for o in missing
             ]
             insert_sql = (
-                f"INSERT INTO offers ({', '.join(cols)}) VALUES "
+                f"INSERT INTO {offers_tbl} ({', '.join(cols)}) VALUES "
                 + ", ".join(values_clauses)
             )
             conn.execute(insert_sql)
@@ -1081,7 +1114,8 @@ def get_offers(conn: Optional[Any] = None) -> List[Dict[str, Any]]:
                 if cached is not None and (now - cached[0]) < _OFFERS_TTL_SEC:
                     return [dict(o) for o in cached[1]]
 
-        cur = active_conn.execute("SELECT * FROM offers ORDER BY priority ASC")
+        offers_tbl = qualify_table("offers", active_conn)
+        cur = active_conn.execute(f"SELECT * FROM {offers_tbl} ORDER BY priority ASC")
         rows = cur.fetchall()
         cols = [str(d[0]).split(".")[-1] for d in (cur.description or [])]
         offers = [
@@ -1138,8 +1172,10 @@ if __name__ == "__main__":
     with get_conn() as _c:
         init_schema(_c)
         seed_offers(_c)
-        offers = _c.execute("SELECT COUNT(*) FROM offers").fetchone()[0]
-        customers = _c.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+        _offers_tbl = qualify_table("offers", _c)
+        _customers_tbl = qualify_table("customers", _c)
+        offers = _c.execute(f"SELECT COUNT(*) FROM {_offers_tbl}").fetchone()[0]
+        customers = _c.execute(f"SELECT COUNT(*) FROM {_customers_tbl}").fetchone()[0]
         print(f"DB target: {describe_db_target()}")
-        print(f"offers   : {offers}")
-        print(f"customers: {customers}")
+        print(f"offers   : {offers} ({_offers_tbl})")
+        print(f"customers: {customers} ({_customers_tbl})")

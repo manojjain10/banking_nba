@@ -34,8 +34,10 @@ from db import (
     describe_db_target,
     format_sql_literal,
     get_conn,
+    get_impala_database,
     init_schema,
     is_impala_backend,
+    qualify_table,
     seed_offers,
 )
 
@@ -312,26 +314,29 @@ def seed_customers(
     reseed: bool = False,
     batch_size: int = 1_000,
 ) -> int:
-    """Seed the ``customers`` table up to ``n`` rows. Idempotent unless ``reseed=True``."""
+    """Seed ``<IMPALA_DATABASE>.customers`` (or SQLite ``customers``) up to ``n`` rows."""
     impala_mode = is_impala_backend(conn)
+    customers_tbl = qualify_table("customers", conn)
 
     if reseed:
         if impala_mode:
             try:
-                conn.execute("TRUNCATE TABLE customers")
+                conn.execute(f"TRUNCATE TABLE {customers_tbl}")
             except Exception:  # noqa: BLE001
-                conn.execute("DELETE FROM customers")
+                conn.execute(f"DELETE FROM {customers_tbl}")
         else:
-            conn.execute("DELETE FROM customers")
+            conn.execute(f"DELETE FROM {customers_tbl}")
         conn.commit()
 
-    existing = int(conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0])
+    existing = int(conn.execute(f"SELECT COUNT(*) FROM {customers_tbl}").fetchone()[0])
     if existing >= n:
-        print(f"[pii_datagen] customers already has {existing} rows (>= {n}); skipping seed.")
+        print(
+            f"[pii_datagen] {customers_tbl} already has {existing} rows (>= {n}); skipping seed."
+        )
         return existing
 
     print(
-        f"[pii_datagen] seeding customers {existing + 1}..{n} "
+        f"[pii_datagen] seeding {customers_tbl} rows {existing + 1}..{n} "
         f"(backend={'impala-iceberg' if impala_mode else 'sqlite'}) ..."
     )
     rows = list(_customer_rows(existing + 1, n, seed=seed))
@@ -346,33 +351,42 @@ def seed_customers(
                 "(" + ", ".join(format_sql_literal(v) for v in row) + ")"
                 for row in chunk
             )
-            conn.execute(f"INSERT INTO customers ({col_list}) VALUES\n{values_sql}")
+            conn.execute(f"INSERT INTO {customers_tbl} ({col_list}) VALUES\n{values_sql}")
             print(
                 f"[pii_datagen] committed Iceberg batch {b_idx}/{total_batches} "
-                f"({len(chunk)} rows)",
+                f"into {customers_tbl} ({len(chunk)} rows)",
                 flush=True,
             )
         try:
-            conn.execute("COMPUTE STATS customers")
+            conn.execute(f"COMPUTE STATS {customers_tbl}")
         except Exception as exc:  # noqa: BLE001
-            print(f"[pii_datagen] note: COMPUTE STATS customers skipped ({exc})")
+            print(f"[pii_datagen] note: COMPUTE STATS {customers_tbl} skipped ({exc})")
         conn.commit()
     else:
         placeholders = ", ".join("?" for _ in _CUSTOMER_COLUMNS)
         conn.executemany(
-            f"INSERT INTO customers ({col_list}) VALUES ({placeholders})",
+            f"INSERT INTO {customers_tbl} ({col_list}) VALUES ({placeholders})",
             rows,
         )
         conn.commit()
 
-    total = int(conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0])
-    print(f"[pii_datagen] customers total after seed: {total}")
+    total = int(conn.execute(f"SELECT COUNT(*) FROM {customers_tbl}").fetchone()[0])
+    print(f"[pii_datagen] {customers_tbl} total after seed: {total}")
     return total
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Seed the NBA demo database (CDW Impala Apache Iceberg v2 or SQLite)."
+    )
+    parser.add_argument(
+        "--database",
+        type=str,
+        default=None,
+        help=(
+            "Target Impala database name overriding $IMPALA_DATABASE "
+            f"(currently '{get_impala_database()}')."
+        ),
     )
     parser.add_argument(
         "--rows",
@@ -399,6 +413,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.database and args.database.strip():
+        os.environ["IMPALA_DATABASE"] = args.database.strip()
+
     with get_conn() as conn:
         init_schema(conn)
         n_offers = seed_offers(conn)
@@ -409,9 +426,11 @@ def main() -> None:
             reseed=args.reseed,
             batch_size=args.batch_size,
         )
+        offers_tbl = qualify_table("offers", conn)
+        customers_tbl = qualify_table("customers", conn)
         print(
             f"[pii_datagen] DB ready at {describe_db_target()} "
-            f"(offers={n_offers}, customers={n_customers})"
+            f"({offers_tbl}={n_offers}, {customers_tbl}={n_customers})"
         )
 
 
