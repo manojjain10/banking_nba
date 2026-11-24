@@ -8,14 +8,15 @@ import {
   fetchConfig,
   fetchCustomers,
   fetchPortfolioAnalytics,
+  postPortfolioChatTurn,
   postTurn,
   type CustomerFilterParams,
   type OfferAnalytics,
   type PortfolioAnalyticsResponse,
   type SegmentAnalytics,
 } from "./api.js";
-import { renderChat } from "./chat.js";
-import { resetConversation, state } from "./state.js";
+import { PORTFOLIO_SUGGESTIONS, renderChat } from "./chat.js";
+import { resetConversation, resetPortfolioConversation, state } from "./state.js";
 import { currentTheme, syncToggleButton, toggleTheme } from "./theme.js";
 import { showToast } from "./toast.js";
 
@@ -430,6 +431,7 @@ function setWorkspaceView(view: WorkspaceView): void {
   syncCohortFilterPill();
 
   if (isAnalytics) {
+    repaintPortfolioChat();
     void loadPortfolioAnalytics();
   }
 }
@@ -725,6 +727,14 @@ function wireWorkbenchEvents(): void {
 
   // Reset & Theme (single reset listener)
   byId("new-conversation").addEventListener("click", () => {
+    if (wb.activeView === "ANALYTICS") {
+      resetPortfolioConversation();
+      repaintPortfolioChat();
+      void loadPortfolioAnalytics();
+      showToast("Portfolio analytics & AI chat reset.");
+      return;
+    }
+
     if (wb.cohortFilterLabel) {
       clearCohortFilter(false);
     } else {
@@ -734,9 +744,7 @@ function wireWorkbenchEvents(): void {
     }
     resetConversation();
     repaintChat();
-    if (wb.activeView === "ANALYTICS") {
-      void loadPortfolioAnalytics();
-    } else if (state.customerId !== null) {
+    if (state.customerId !== null) {
       void loadCustomerDossier(state.customerId);
     }
     showToast("Workbench reset.");
@@ -771,6 +779,30 @@ function wireWorkbenchEvents(): void {
       sendComposerMessage();
     }
   });
+
+  // Portfolio & Risk AI Analyst Chat Composer
+  const portfolioForm = byId<HTMLFormElement>("portfolio-composer");
+  const portfolioInput = byId<HTMLTextAreaElement>("portfolio-composer-input");
+
+  const sendPortfolioComposerMessage = (): void => {
+    if (state.portfolioPending) return;
+    const msg = portfolioInput.value.trim();
+    if (!msg) return;
+    portfolioInput.value = "";
+    void submitPortfolioChatTurn(msg);
+  };
+
+  portfolioForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    sendPortfolioComposerMessage();
+  });
+
+  portfolioInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      sendPortfolioComposerMessage();
+    }
+  });
 }
 
 function repaintChat(): void {
@@ -785,6 +817,76 @@ function repaintChat(): void {
     });
   } catch (err) {
     console.warn("Chat render skipped:", err);
+  }
+}
+
+function repaintPortfolioChat(): void {
+  const chatEl = document.getElementById("portfolio-chat");
+  if (!chatEl) return;
+  if (!Array.isArray(state.portfolioHistory)) {
+    state.portfolioHistory = [];
+  }
+  try {
+    renderChat(
+      chatEl,
+      (text) => {
+        void submitPortfolioChatTurn(text);
+      },
+      {
+        messages: state.portfolioHistory,
+        pending: state.portfolioPending,
+        emptyHeading: "Portfolio & Risk AI Analyst",
+        emptyBlurb:
+          "Ask natural-language questions across your Apache Iceberg customer book, Governance Funnel, Segment × Risk tiers, and Expected Net Profit in CDW Impala.",
+        suggestions: PORTFOLIO_SUGGESTIONS,
+      },
+    );
+  } catch (err) {
+    console.warn("Portfolio chat render skipped:", err);
+  }
+}
+
+async function submitPortfolioChatTurn(message: string): Promise<void> {
+  if (state.portfolioPending) return;
+  state.portfolioHistory.push({
+    role: "user",
+    content: message,
+    at: new Date(),
+    runId: null,
+  });
+  state.portfolioPending = true;
+  repaintPortfolioChat();
+
+  try {
+    const result = await postPortfolioChatTurn(
+      message,
+      state.portfolioThreadId,
+      wb.role,
+    );
+    state.portfolioHistory.push({
+      role: "assistant",
+      content: result.display_message || result.assistant_message,
+      at: new Date(),
+      runId: result.run_id,
+      executedSql: result.executed_sql ?? null,
+    });
+  } catch (err) {
+    const detail =
+      err instanceof ApiError
+        ? `${err.message} (HTTP ${err.status})`
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    state.portfolioHistory.push({
+      role: "assistant",
+      content: `Portfolio query error: ${detail}`,
+      at: new Date(),
+      runId: null,
+      isError: true,
+    });
+  } finally {
+    state.portfolioPending = false;
+    repaintPortfolioChat();
   }
 }
 
@@ -826,6 +928,7 @@ async function submitChatTurn(message: string): Promise<void> {
 async function boot(): Promise<void> {
   wireWorkbenchEvents();
   repaintChat();
+  repaintPortfolioChat();
 
   const select = byId<HTMLSelectElement>("customer-select");
   select.innerHTML = `<option value="">Loading customers...</option>`;

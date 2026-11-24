@@ -14,6 +14,22 @@ export const SUGGESTIONS = [
   "Can you help me consolidate high-APR balances into a fixed-rate loan?",
 ];
 
+/** Portfolio & Risk AI Analyst starter prompts grounded on CDW Impala data. */
+export const PORTFOLIO_SUGGESTIONS = [
+  "Which customer segment drives the highest Expected Net Profit and why?",
+  "What is the average checking balance and credit score by segment and risk tier?",
+  "Which top 5 states have the most Mass Affluent customers with balances over $50k?",
+  "Compare portfolio net profit between Branch Advisor ($18) vs. In-App ($0.50) channels.",
+];
+
+export interface ChatRenderOptions {
+  messages?: ChatMessage[];
+  pending?: boolean;
+  emptyHeading?: string;
+  emptyBlurb?: string;
+  suggestions?: string[];
+}
+
 /**
  * Render assistant text as HTML.
  *
@@ -164,6 +180,18 @@ function messageElement(message: ChatMessage): HTMLElement {
   }
   wrapper.appendChild(bubble);
 
+  if (message.role === "assistant" && message.executedSql) {
+    const sqlDetails = document.createElement("details");
+    sqlDetails.className = "msg__sql";
+    const summary = document.createElement("summary");
+    summary.textContent = "View Impala SQL";
+    const pre = document.createElement("pre");
+    pre.className = "msg__sql-code";
+    pre.textContent = message.executedSql;
+    sqlDetails.append(summary, pre);
+    wrapper.appendChild(sqlDetails);
+  }
+
   const actions = document.createElement("div");
   actions.className = "msg__actions";
 
@@ -207,7 +235,10 @@ function typingElement(): HTMLElement {
  * `onSuggestion` is wired by main.ts so a click sends the line straight
  * through - the fastest path from a cold open to a traced turn.
  */
-function emptyState(onSuggestion: (text: string) => void): HTMLElement {
+function emptyState(
+  onSuggestion: (text: string) => void,
+  options?: ChatRenderOptions,
+): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "chat__empty";
 
@@ -218,17 +249,19 @@ function emptyState(onSuggestion: (text: string) => void): HTMLElement {
   wrapper.appendChild(icon);
 
   const heading = document.createElement("h2");
-  heading.textContent = "Governed Next-Best-Action Engine";
+  heading.textContent = options?.emptyHeading ?? "Governed Next-Best-Action Engine";
   wrapper.appendChild(heading);
 
   const blurb = document.createElement("p");
   blurb.textContent =
+    options?.emptyBlurb ??
     "Policy-First eligibility, suitability, and Do-Not-Solicit gates run before ranking cross-sell offers by Expected Profit. Select a customer profile above or test a multi-product scenario below.";
   wrapper.appendChild(blurb);
 
+  const prompts = options?.suggestions ?? SUGGESTIONS;
   const list = document.createElement("div");
   list.className = "chat__suggestions";
-  for (const text of SUGGESTIONS) {
+  for (const text of prompts) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "suggestion";
@@ -249,23 +282,27 @@ function emptyState(onSuggestion: (text: string) => void): HTMLElement {
 }
 
 /**
- * Repaint the whole transcript.
+ * Repaint a chat transcript container.
  */
 export function renderChat(
   container: HTMLElement,
   onSuggestion: (text: string) => void,
+  options?: ChatRenderOptions,
 ): void {
   container.replaceChildren();
 
-  if (state.history.length === 0 && !state.pending) {
-    container.appendChild(emptyState(onSuggestion));
+  const messages = options?.messages ?? state.history;
+  const isPending = options?.pending ?? state.pending;
+
+  if (messages.length === 0 && !isPending) {
+    container.appendChild(emptyState(onSuggestion, options));
     return;
   }
 
-  for (const message of state.history) {
+  for (const message of messages) {
     container.appendChild(messageElement(message));
   }
-  if (state.pending) {
+  if (isPending) {
     container.appendChild(typingElement());
   }
 

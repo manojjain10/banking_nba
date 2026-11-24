@@ -46,6 +46,7 @@ from nba_app import (
     LANGSMITH_PROJECT,
     MAX_CLARIFY_TURNS,
     demo_customer_picks,
+    run_portfolio_chat_turn,
     run_turn,
     strip_offer_marker,
 )
@@ -154,6 +155,21 @@ class OutcomeResponse(BaseModel):
     recorded_at: str
 
 
+class PortfolioChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    thread_id: str = Field(min_length=1)
+    channel: Literal["BANKER_DESKTOP", "IN_APP"] = "BANKER_DESKTOP"
+
+
+class PortfolioChatResponse(BaseModel):
+    run_id: Optional[str] = None
+    assistant_message: str = ""
+    display_message: str = ""
+    executed_sql: Optional[str] = None
+    row_count: int = 0
+    channel: str = "BANKER_DESKTOP"
+
+
 # ----------------------------------------------------------------------
 # App
 # ----------------------------------------------------------------------
@@ -216,14 +232,10 @@ def get_customers(
     return [Customer(**row) for row in rows]
 
 
-@app.get("/api/analytics/portfolio")
-def get_portfolio_analytics(
-    channel: Literal["BANKER_DESKTOP", "IN_APP"] = Query(default="BANKER_DESKTOP"),
-) -> Dict[str, Any]:
-    """Aggregate Governance Funnel, Segment x Risk matrix, and Offer Expected Profit."""
+def _get_cached_portfolio_analytics(channel: str) -> Dict[str, Any]:
     from offer_rules import compute_portfolio_analytics
 
-    cache_key = channel.upper()
+    cache_key = "IN_APP" if str(channel).upper() == "IN_APP" else "BANKER_DESKTOP"
     now = time.monotonic()
     with _PORTFOLIO_LOCK:
         cached = _PORTFOLIO_CACHE.get(cache_key)
@@ -242,6 +254,32 @@ def get_portfolio_analytics(
         _PORTFOLIO_CACHE[cache_key] = (time.monotonic(), payload)
 
     return payload
+
+
+@app.get("/api/analytics/portfolio")
+def get_portfolio_analytics(
+    channel: Literal["BANKER_DESKTOP", "IN_APP"] = Query(default="BANKER_DESKTOP"),
+) -> Dict[str, Any]:
+    """Aggregate Governance Funnel, Segment x Risk matrix, and Offer Expected Profit."""
+    return _get_cached_portfolio_analytics(channel)
+
+
+@app.post("/api/analytics/chat", response_model=PortfolioChatResponse)
+def post_portfolio_chat(req: PortfolioChatRequest) -> PortfolioChatResponse:
+    """Run one turn of the Impala-grounded Portfolio & Risk AI Analyst."""
+    active_channel = "IN_APP" if req.channel == "IN_APP" else "BANKER_DESKTOP"
+    alt_channel = "BANKER_DESKTOP" if active_channel == "IN_APP" else "IN_APP"
+
+    active_payload = _get_cached_portfolio_analytics(active_channel)
+    alt_payload = _get_cached_portfolio_analytics(alt_channel)
+
+    result = run_portfolio_chat_turn(
+        user_input=req.message,
+        thread_id=req.thread_id,
+        active_portfolio=active_payload,
+        alt_portfolio=alt_payload,
+    )
+    return PortfolioChatResponse(**result)
 
 
 @app.get("/api/customers/{customer_id}/nba")

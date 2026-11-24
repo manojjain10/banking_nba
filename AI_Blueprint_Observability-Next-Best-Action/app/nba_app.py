@@ -22,7 +22,7 @@ import json
 import os
 import random
 import re
-from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
+from typing import Annotated, Any, Dict, List, Literal, Optional, Tuple, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -34,7 +34,7 @@ from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from pydantic import BaseModel, Field
 
-from db import get_conn, init_schema, qualify_table, seed_offers
+from db import execute_readonly_sql, get_conn, init_schema, qualify_table, seed_offers
 from offer_rules import evaluate_governance_and_rank
 
 os.environ.setdefault("LANGSMITH_TRACING", "true")
@@ -781,6 +781,389 @@ def run_turn(
         "accumulated_features": final_state.get("accumulated_features", {}),
         "customer_record": final_state.get("customer_record"),
         "clarify_count": final_state.get("clarify_count"),
+    }
+
+
+# ----------------------------------------------------------------------
+# Portfolio & Risk AI Analyst (Impala Text-to-SQL + Insight Synthesis)
+# ----------------------------------------------------------------------
+
+import threading as _threading
+
+_PORTFOLIO_CHAT_LOCK = _threading.Lock()
+_PORTFOLIO_CHAT_HISTORY: Dict[str, List[Tuple[str, str]]] = {}
+
+_portfolio_sql_planner_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """You are an expert retail-banking data analyst writing read-only Apache Impala SQL over Iceberg tables.
+
+Available tables:
+1. {customers_tbl} (
+     customer_id INT, full_name STRING, email STRING, city STRING, state STRING,
+     zip_code STRING, company STRING, job_title STRING, age INT,
+     annual_income DOUBLE,
+     employment_status STRING,  -- 'EMPLOYED','SELF_EMPLOYED','STUDENT','UNEMPLOYED','RETIRED'
+     existing_debt DOUBLE,
+     risk_tier STRING,          -- 'LOW','MED','HIGH'
+     credit_score INT,
+     avg_checking_balance DOUBLE,
+     customer_segment STRING,   -- 'Mass_Affluent','Rate_Sensitive_Saver','Young_Professional','Credit_Rebuilder'
+     current_products STRING,   -- JSON list e.g. '["CHECKING_PREMIER"]'
+     preferred_channel STRING,  -- 'BANKER_DESKTOP','IN_APP'
+     do_not_solicit INT,        -- 1 = opted out (DNS), 0 = eligible
+     last_contact_days_ago INT  -- < 14 = contact fatigue cooldown
+   )
+2. {offers_tbl} (
+     offer_id STRING, offer_name STRING, product_category STRING,
+     target_risk_tier STRING, min_age INT, max_age INT, min_income DOUBLE,
+     min_credit_score INT, min_balance DOUBLE, apr_range STRING, priority INT,
+     base_margin DOUBLE, base_exposure DOUBLE, base_loss_rate DOUBLE,
+     cannibalization_penalty DOUBLE
+   )
+3. {outcomes_tbl} (
+     customer_id INT, offer_id STRING, outcome STRING, -- 'ACCEPTED','DEFERRED','DECLINED'
+     channel STRING, simulated_amount DOUBLE, recorded_at STRING
+   )
+
+You ALSO already have pre-computed Portfolio Dashboard metrics (total book KPIs, 5-stage Governance Funnel, Segment x Risk counts & net profit, and Offer Expected Net Profit for both Branch Advisor and In-App channels).
+
+Decide whether answering the user's question benefits from running an ad-hoc SELECT query against {customers_tbl}, {offers_tbl}, or {outcomes_tbl} (for example: breakdowns by state/city, employment_status, credit_score, avg_checking_balance, annual_income, existing_debt, DTI, top/specific customers, custom thresholds, or logged offer_outcomes).
+
+Impala SQL rules:
+- Output ONLY a single read-only SELECT statement (never INSERT/UPDATE/DELETE/DDL, no semicolons).
+- Always use fully qualified table names ({customers_tbl}, {offers_tbl}, {outcomes_tbl}).
+- Include LIMIT 25 whenever returning individual or grouped rows.
+- Repeat full non-aggregated expressions in GROUP BY (do not reference SELECT aliases in GROUP BY or HAVING).
+
+Respond with ONLY a JSON object:
+{{"needs_sql": true or false, "sql": "SELECT ... (or empty string if needs_sql is false)", "reasoning": "brief explanation"}}
+""",
+        ),
+        (
+            "human",
+            "Conversation history:\n{history_text}\n\n"
+            "User question: {question}\n\n"
+            "Return JSON only:",
+        ),
+    ]
+)
+
+_portfolio_sql_repair_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "Fix the following read-only Apache Impala SELECT query using tables "
+            "{customers_tbl}, {offers_tbl}, {outcomes_tbl}. Return ONLY valid JSON: "
+            '{{"sql": "SELECT ..."}}',
+        ),
+        (
+            "human",
+            "Original question: {question}\nFailed SQL:\n{failed_sql}\nError:\n{error}\n\nReturn JSON only:",
+        ),
+    ]
+)
+
+_portfolio_insight_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """You are the **Portfolio & Risk AI Analyst** for a retail bank's Governed Next-Best-Action platform on Cloudera AI (Apache Iceberg + CDW Impala).
+
+Ground every number strictly on the provided **Portfolio Telemetry** and **Live Impala SQL Query Results**:
+- Active Channel: {active_channel}
+- Portfolio Telemetry JSON (includes active channel KPIs, 5-stage Governance Funnel, Segment x Risk matrix, Offer Expected Profit rankings, and cross-channel comparison):
+{portfolio_json}
+
+- Live Impala SQL Query Executed: {executed_sql}
+- Live Impala SQL Result Rows:
+{sql_results_json}
+
+Guidelines:
+- Lead with clear, executive-ready insights and exact numbers/percentages ($ formatted, comma separators).
+- Use concise bullet points and **bold** callouts so insights scan easily in a side panel.
+- Explain *why* patterns occur under our two-stage architecture (Stage 1 Policy/DNS/Cooldown/Credit suitability gates -> Stage 2 Expected Net Profit = Propensity * Margin - Expected Credit Loss - Contact Cost - Cannibalization).
+- Never invent figures not supported by the data above.
+""",
+        ),
+        (
+            "human",
+            "Conversation so far:\n{history_text}\n\nUser question: {question}",
+        ),
+    ]
+)
+
+
+def _extract_json_dict(raw_text: str) -> Dict[str, Any]:
+    cleaned = _strip_reasoning(raw_text or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+    try:
+        parsed = json.loads(cleaned)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:  # noqa: BLE001
+        pass
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            parsed = json.loads(cleaned[start : end + 1])
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:  # noqa: BLE001
+            return {}
+    return {}
+
+
+def _mock_portfolio_plan_and_answer(
+    question: str,
+    portfolio_summary: Dict[str, Any],
+    customers_tbl: str,
+    outcomes_tbl: str,
+) -> Tuple[str, Optional[str], int]:
+    """Deterministic Impala/SQLite-backed insights when NBA_MOCK=1."""
+    q_low = question.lower()
+    executed_sql: Optional[str] = None
+    query_rows: List[Dict[str, Any]] = []
+
+    if any(k in q_low for k in ("state", "city", "geographic", "where")):
+        candidate_sql = (
+            f"SELECT state, COUNT(*) AS customer_count, "
+            f"ROUND(AVG(avg_checking_balance), 0) AS avg_balance, "
+            f"ROUND(AVG(annual_income), 0) AS avg_income "
+            f"FROM {customers_tbl} "
+            f"WHERE customer_segment = 'Mass_Affluent' AND avg_checking_balance >= 50000 "
+            f"GROUP BY state ORDER BY customer_count DESC LIMIT 5"
+        )
+        res = execute_readonly_sql(candidate_sql, max_rows=10)
+        executed_sql = res["sql"]
+        query_rows = res["rows"]
+    elif any(k in q_low for k in ("credit score", "checking balance", "average", "avg", "employment", "debt")):
+        candidate_sql = (
+            f"SELECT customer_segment, risk_tier, COUNT(*) AS customers, "
+            f"ROUND(AVG(avg_checking_balance), 0) AS avg_balance, "
+            f"ROUND(AVG(credit_score), 0) AS avg_credit_score, "
+            f"ROUND(AVG(existing_debt), 0) AS avg_debt "
+            f"FROM {customers_tbl} "
+            f"GROUP BY customer_segment, risk_tier "
+            f"ORDER BY customer_segment ASC, risk_tier ASC LIMIT 20"
+        )
+        res = execute_readonly_sql(candidate_sql, max_rows=20)
+        executed_sql = res["sql"]
+        query_rows = res["rows"]
+    elif "outcome" in q_low or "accepted" in q_low or "declined" in q_low:
+        candidate_sql = (
+            f"SELECT outcome, channel, COUNT(*) AS total "
+            f"FROM {outcomes_tbl} GROUP BY outcome, channel ORDER BY total DESC LIMIT 10"
+        )
+        res = execute_readonly_sql(candidate_sql, max_rows=10)
+        executed_sql = res["sql"]
+        query_rows = res["rows"]
+
+    kpis = portfolio_summary.get("kpis", {})
+    segments = portfolio_summary.get("segments", [])
+    offers = portfolio_summary.get("offers", [])
+    cross = portfolio_summary.get("channel_comparison", {})
+
+    top_seg = max(segments, key=lambda s: float(s.get("total_expected_profit", 0)), default={})
+    top_offer = offers[0] if offers else {}
+
+    lines = [
+        f"**Portfolio Insight ({portfolio_summary.get('channel', 'BANKER_DESKTOP')}):**",
+        f"- **Addressable Book:** **{kpis.get('profitable_customers', 0):,}** of **{kpis.get('total_customers', 0):,}** customers ({kpis.get('profitable_pct', 0):.1f}%) are policy-cleared and net-profitable, generating **${kpis.get('total_expected_profit', 0):,.0f}/yr**.",
+        f"- **Governance Suppressions:** **{kpis.get('suppressed_customers', 0):,}** profiles ({kpis.get('suppressed_pct', 0):.1f}%) are held back by DNS, <14d contact cooldown, or credit suitability guardrails.",
+    ]
+    if top_seg:
+        lines.append(
+            f"- **Top Segment:** **{top_seg.get('label')}** leads with **${top_seg.get('total_expected_profit', 0):,.0f}/yr** across **{top_seg.get('profitable_customers', 0):,}** targetable profiles."
+        )
+    if top_offer:
+        lines.append(
+            f"- **#1 Product Offer:** **{top_offer.get('offer_name')}** contributes **${top_offer.get('total_expected_profit', 0):,.0f}/yr** (primary cohort: **{top_offer.get('primary_target_count', 0):,}**)."
+        )
+    if cross:
+        lines.append(
+            f"- **Channel Economics:** Branch Advisor ($18.00/contact) yields **${cross.get('banker_desktop_profit', 0):,.0f}/yr** vs. Customer In-App ($0.50/contact) at **${cross.get('in_app_profit', 0):,.0f}/yr**."
+        )
+    if query_rows:
+        preview = "; ".join(
+            ", ".join(f"{k}={v}" for k, v in row.items()) for row in query_rows[:5]
+        )
+        lines.append(f"- **Live Database Breakdown ({len(query_rows)} rows):** {preview}")
+
+    return "\n".join(lines), executed_sql, len(query_rows)
+
+
+@traceable(run_type="chain", name="portfolio_analytics_turn")
+def run_portfolio_chat_turn(
+    user_input: str,
+    thread_id: str,
+    active_portfolio: Dict[str, Any],
+    alt_portfolio: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Answer portfolio & customer-book questions using Impala SQL + CAII LLM."""
+    with _PORTFOLIO_CHAT_LOCK:
+        prior_turns = list(_PORTFOLIO_CHAT_HISTORY.get(thread_id, []))[-8:]
+
+    history_text = (
+        "\n".join(f"{role.upper()}: {text}" for role, text in prior_turns)
+        if prior_turns
+        else "(start of conversation)"
+    )
+
+    conn = get_conn()
+    try:
+        init_schema(conn)
+        seed_offers(conn)
+        customers_tbl = qualify_table("customers", conn)
+        offers_tbl = qualify_table("offers", conn)
+        outcomes_tbl = qualify_table("offer_outcomes", conn)
+    finally:
+        conn.close()
+
+    active_channel = str(active_portfolio.get("channel", "BANKER_DESKTOP"))
+    banker_profit = (
+        active_portfolio["kpis"]["total_expected_profit"]
+        if active_channel == "BANKER_DESKTOP"
+        else (alt_portfolio or {}).get("kpis", {}).get("total_expected_profit", 0.0)
+    )
+    in_app_profit = (
+        active_portfolio["kpis"]["total_expected_profit"]
+        if active_channel == "IN_APP"
+        else (alt_portfolio or {}).get("kpis", {}).get("total_expected_profit", 0.0)
+    )
+    banker_profitable = (
+        active_portfolio["kpis"]["profitable_customers"]
+        if active_channel == "BANKER_DESKTOP"
+        else (alt_portfolio or {}).get("kpis", {}).get("profitable_customers", 0)
+    )
+    in_app_profitable = (
+        active_portfolio["kpis"]["profitable_customers"]
+        if active_channel == "IN_APP"
+        else (alt_portfolio or {}).get("kpis", {}).get("profitable_customers", 0)
+    )
+
+    compact_summary: Dict[str, Any] = {
+        "channel": active_channel,
+        "contact_cost": active_portfolio.get("contact_cost"),
+        "kpis": active_portfolio.get("kpis"),
+        "funnel": active_portfolio.get("funnel"),
+        "segments": active_portfolio.get("segments"),
+        "offers": active_portfolio.get("offers"),
+        "channel_comparison": {
+            "banker_desktop_contact_cost": 18.0,
+            "banker_desktop_profitable_customers": banker_profitable,
+            "banker_desktop_profit": banker_profit,
+            "in_app_contact_cost": 0.5,
+            "in_app_profitable_customers": in_app_profitable,
+            "in_app_profit": in_app_profit,
+            "in_app_vs_banker_profit_uplift": round(float(in_app_profit) - float(banker_profit), 2),
+        },
+    }
+
+    if os.environ.get("NBA_MOCK", "") == "1" or NBA_MOCK:
+        reply, executed_sql, row_count = _mock_portfolio_plan_and_answer(
+            user_input, compact_summary, customers_tbl, outcomes_tbl
+        )
+    else:
+        executed_sql = None
+        sql_result_payload: Any = "No ad-hoc SQL needed (answered from Portfolio Telemetry)."
+        row_count = 0
+
+        # Step 1: Ask CAII LLM whether an ad-hoc Impala SELECT query is helpful
+        try:
+            planner_chain = _portfolio_sql_planner_prompt | get_llm(temperature=0.0)
+            plan_resp = planner_chain.invoke(
+                {
+                    "customers_tbl": customers_tbl,
+                    "offers_tbl": offers_tbl,
+                    "outcomes_tbl": outcomes_tbl,
+                    "history_text": history_text,
+                    "question": user_input,
+                }
+            )
+            plan_obj = _extract_json_dict(plan_resp.content)
+            candidate_sql = str(plan_obj.get("sql") or "").strip()
+            needs_sql = bool(plan_obj.get("needs_sql")) and bool(candidate_sql)
+        except Exception as exc:  # noqa: BLE001
+            needs_sql = False
+            candidate_sql = ""
+            sql_result_payload = f"SQL planner skipped: {exc}"
+
+        # Step 2: Execute guarded read-only SELECT on CDW Impala (with 1 repair retry)
+        if needs_sql and candidate_sql:
+            try:
+                res = execute_readonly_sql(candidate_sql, max_rows=50)
+                executed_sql = res["sql"]
+                row_count = int(res["row_count"])
+                sql_result_payload = {
+                    "row_count": row_count,
+                    "truncated": res["truncated"],
+                    "rows": res["rows"],
+                }
+            except Exception as first_err:  # noqa: BLE001
+                try:
+                    repair_chain = _portfolio_sql_repair_prompt | get_llm(temperature=0.0)
+                    rep_resp = repair_chain.invoke(
+                        {
+                            "customers_tbl": customers_tbl,
+                            "offers_tbl": offers_tbl,
+                            "outcomes_tbl": outcomes_tbl,
+                            "question": user_input,
+                            "failed_sql": candidate_sql,
+                            "error": str(first_err),
+                        }
+                    )
+                    repaired_sql = str(_extract_json_dict(rep_resp.content).get("sql") or "").strip()
+                    if repaired_sql:
+                        res = execute_readonly_sql(repaired_sql, max_rows=50)
+                        executed_sql = res["sql"]
+                        row_count = int(res["row_count"])
+                        sql_result_payload = {
+                            "row_count": row_count,
+                            "truncated": res["truncated"],
+                            "rows": res["rows"],
+                        }
+                    else:
+                        sql_result_payload = f"Ad-hoc SQL skipped ({first_err}); use Portfolio Telemetry."
+                except Exception as second_err:  # noqa: BLE001
+                    sql_result_payload = f"Ad-hoc SQL unavailable ({second_err}); use Portfolio Telemetry."
+
+        # Step 3: Synthesize executive insights with CAII LLM
+        synth_chain = _portfolio_insight_prompt | get_llm(temperature=0.2)
+        synth_resp = synth_chain.invoke(
+            {
+                "active_channel": (
+                    "Customer In-App ($0.50/contact)"
+                    if active_channel == "IN_APP"
+                    else "Branch Advisor ($18.00/contact)"
+                ),
+                "portfolio_json": json.dumps(compact_summary, default=str),
+                "executed_sql": executed_sql or "(none — answered from Portfolio Telemetry)",
+                "sql_results_json": json.dumps(sql_result_payload, default=str),
+                "history_text": history_text,
+                "question": user_input,
+            }
+        )
+        reply = _strip_reasoning(synth_resp.content)
+
+    with _PORTFOLIO_CHAT_LOCK:
+        updated = list(_PORTFOLIO_CHAT_HISTORY.get(thread_id, []))
+        updated.append(("user", user_input))
+        updated.append(("assistant", reply))
+        _PORTFOLIO_CHAT_HISTORY[thread_id] = updated[-16:]
+
+    rt = get_current_run_tree()
+    run_id = str(rt.id) if rt else None
+
+    return {
+        "run_id": run_id,
+        "assistant_message": reply,
+        "display_message": reply,
+        "executed_sql": executed_sql,
+        "row_count": row_count,
+        "channel": active_channel,
     }
 
 

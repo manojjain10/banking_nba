@@ -68,6 +68,21 @@ export async function postTurn(message, threadId, customerId) {
         run_id: data.run_id ?? null,
     };
 }
+export async function postPortfolioChatTurn(message, threadId, channel = "BANKER_DESKTOP") {
+    const data = await requestJson("/api/analytics/chat", {
+        method: "POST",
+        body: JSON.stringify({
+            message,
+            thread_id: threadId,
+            channel,
+        }),
+    });
+    return {
+        ...data,
+        run_id: data.run_id ?? null,
+        executed_sql: data.executed_sql ?? null,
+    };
+}
 export async function postFeedback(runId, score) {
     return requestJson("/api/feedback", {
         method: "POST",

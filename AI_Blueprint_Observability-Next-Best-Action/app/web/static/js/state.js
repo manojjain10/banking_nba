@@ -27,6 +27,9 @@ export const state = {
     customers: [],
     config: null,
     pending: false,
+    portfolioThreadId: `portfolio-${newThreadId()}`,
+    portfolioHistory: [],
+    portfolioPending: false,
 };
 /**
  * Start a fresh conversation.
@@ -40,6 +43,11 @@ export function resetConversation() {
     state.history = [];
     state.lastResult = null;
     state.pending = false;
+}
+export function resetPortfolioConversation() {
+    state.portfolioThreadId = `portfolio-${newThreadId()}`;
+    state.portfolioHistory = [];
+    state.portfolioPending = false;
 }
 /** Build the LangSmith Threads deep-link for the current conversation. */
 export function langsmithThreadUrl() {

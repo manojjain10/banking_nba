@@ -1145,6 +1145,167 @@ def ensure_db_ready(conn: Optional[Any] = None) -> None:
             active_conn.close()
 
 
+_FORBIDDEN_SQL_KEYWORDS = frozenset(
+    {
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "DROP",
+        "ALTER",
+        "CREATE",
+        "TRUNCATE",
+        "REPLACE",
+        "MERGE",
+        "UPSERT",
+        "COMPUTE",
+        "GRANT",
+        "REVOKE",
+        "SET",
+        "USE",
+        "PRAGMA",
+        "ATTACH",
+        "DETACH",
+        "LOAD",
+        "INVALIDATE",
+        "REFRESH",
+    }
+)
+_KNOWN_TABLES = ("customers", "offers", "offer_outcomes")
+
+
+def _strip_sql_fences(raw_sql: str) -> str:
+    txt = (raw_sql or "").strip()
+    if txt.startswith("```"):
+        txt = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", txt)
+        txt = re.sub(r"\s*```$", "", txt).strip()
+    while txt.endswith(";"):
+        txt = txt[:-1].rstrip()
+    return txt
+
+
+def _normalize_readonly_sql(raw_sql: str, impala_mode: bool, db_name: str) -> str:
+    """Validate read-only SELECT/WITH SQL and normalize table qualification."""
+    cleaned = _strip_sql_fences(raw_sql)
+    if not cleaned:
+        raise ValueError("Empty SQL query.")
+
+    # Scan outside single-quoted literals to reject semicolons & mutating keywords
+    unquoted_chars: List[str] = []
+    i = 0
+    n = len(cleaned)
+    in_quote = False
+    while i < n:
+        ch = cleaned[i]
+        if in_quote:
+            if ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if ch == "'":
+                if i + 1 < n and cleaned[i + 1] == "'":
+                    i += 2
+                    continue
+                in_quote = False
+            i += 1
+        else:
+            if ch == "'":
+                in_quote = True
+                unquoted_chars.append(" '' ")
+                i += 1
+            elif ch == "-" and i + 1 < n and cleaned[i + 1] == "-":
+                nl = cleaned.find("\n", i + 2)
+                i = n if nl == -1 else nl + 1
+                unquoted_chars.append(" ")
+            elif ch == "/" and i + 1 < n and cleaned[i + 1] == "*":
+                end_c = cleaned.find("*/", i + 2)
+                if end_c == -1:
+                    raise ValueError("Unterminated SQL block comment.")
+                i = end_c + 2
+                unquoted_chars.append(" ")
+            else:
+                if ch == ";":
+                    raise ValueError("Multiple SQL statements are not allowed.")
+                unquoted_chars.append(ch)
+                i += 1
+
+    if in_quote:
+        raise ValueError("Unterminated string literal in SQL query.")
+
+    unquoted = "".join(unquoted_chars).strip()
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", unquoted)
+    if not tokens or tokens[0].upper() not in ("SELECT", "WITH"):
+        raise ValueError("Only read-only SELECT / WITH queries are permitted.")
+
+    for tok in tokens:
+        upper = tok.upper()
+        if upper in _FORBIDDEN_SQL_KEYWORDS:
+            raise ValueError(f"Disallowed keyword '{upper}' in read-only analytics query.")
+
+    safe_db = sanitize_identifier(db_name)
+    table_alt = "|".join(_KNOWN_TABLES)
+
+    if impala_mode:
+        # Normalize any `<other_db>.<table>` or unqualified `FROM/JOIN <table>` to `<safe_db>.<table>`
+        normalized = re.sub(
+            rf"\b([A-Za-z_][A-Za-z0-9_]*)\.({table_alt})\b",
+            rf"{safe_db}.\2",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        normalized = re.sub(
+            rf"\b(FROM|JOIN)\s+(?!{re.escape(safe_db)}\.)({table_alt})\b",
+            lambda m: f"{m.group(1)} {safe_db}.{m.group(2).lower()}",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+    else:
+        # Strip `<db>.<table>` prefix for local SQLite compatibility
+        normalized = re.sub(
+            rf"\b[A-Za-z_][A-Za-z0-9_]*\.({table_alt})\b",
+            lambda m: m.group(1).lower(),
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+    return normalized
+
+
+def execute_readonly_sql(
+    sql: str,
+    max_rows: int = 50,
+    conn: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Safely execute a read-only analytical SELECT against CDW Impala or SQLite."""
+    safe_cap = max(1, min(int(max_rows), 200))
+    owns_conn = conn is None
+    active_conn = get_conn() if owns_conn else conn
+    try:
+        impala_mode = is_impala_backend(active_conn)
+        db_name = getattr(active_conn, "database", None) or get_impala_database()
+        normalized_sql = _normalize_readonly_sql(sql, impala_mode=impala_mode, db_name=db_name)
+
+        cur = active_conn.execute(normalized_sql)
+        try:
+            fetched = cur.fetchmany(safe_cap + 1)
+        except Exception:  # noqa: BLE001
+            fetched = (cur.fetchall() or [])[: safe_cap + 1]
+
+        cols = [str(d[0]).split(".")[-1] for d in (cur.description or [])]
+        truncated = len(fetched) > safe_cap
+        sliced = fetched[:safe_cap]
+        rows = [{col: row[idx] for idx, col in enumerate(cols)} for row in sliced]
+
+        return {
+            "sql": normalized_sql,
+            "columns": cols,
+            "rows": rows,
+            "row_count": len(rows),
+            "truncated": truncated,
+        }
+    finally:
+        if owns_conn:
+            active_conn.close()
+
+
 def fetch_dataframe(sql: str, conn: Optional[Any] = None) -> Any:
     """Execute ``sql`` against CDW Impala or SQLite and return a ``pandas.DataFrame``."""
     import pandas as pd

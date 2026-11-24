@@ -27,6 +27,8 @@ export interface ChatMessage {
   runId: string | null;
   /** Set when the turn failed; rendered as an error bubble instead. */
   isError?: boolean;
+  /** Optional read-only Impala SQL query executed to ground portfolio insights. */
+  executedSql?: string | null;
 }
 
 export interface SessionState {
@@ -39,6 +41,10 @@ export interface SessionState {
   config: AppConfig | null;
   /** True while a turn is in flight; gates the composer against double-sends. */
   pending: boolean;
+  /** Independent multi-turn thread for Portfolio & Risk Analytics AI Analyst. */
+  portfolioThreadId: string;
+  portfolioHistory: ChatMessage[];
+  portfolioPending: boolean;
 }
 
 function newThreadId(): string {
@@ -59,6 +65,9 @@ export const state: SessionState = {
   customers: [],
   config: null,
   pending: false,
+  portfolioThreadId: `portfolio-${newThreadId()}`,
+  portfolioHistory: [],
+  portfolioPending: false,
 };
 
 /**
@@ -73,6 +82,12 @@ export function resetConversation(): void {
   state.history = [];
   state.lastResult = null;
   state.pending = false;
+}
+
+export function resetPortfolioConversation(): void {
+  state.portfolioThreadId = `portfolio-${newThreadId()}`;
+  state.portfolioHistory = [];
+  state.portfolioPending = false;
 }
 
 /** Build the LangSmith Threads deep-link for the current conversation. */

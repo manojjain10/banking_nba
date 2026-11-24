@@ -23,7 +23,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="styles.css?v=8" />
+    <link rel="stylesheet" href="styles.css?v=9" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>%F0%9F%8F%A6</text></svg>"
@@ -262,83 +262,122 @@
       class="portfolio-view hidden"
       aria-label="Portfolio Segmentation, Risk and Profitability Analytics"
     >
-      <div class="portfolio-banner">
-        <div>
-          <h1 class="portfolio-banner__title">
-            Portfolio Segmentation, Risk &amp; Profitable Addressable Book
-          </h1>
-          <p id="portfolio-subtitle" class="portfolio-banner__sub">
-            Evaluating Policy-First governance gates and Expected Net Profit across the customer book…
-          </p>
-        </div>
-        <span class="portfolio-banner__hint">
-          Click any segment or product row below to filter &amp; work that cohort in the Advisor Workbench →
-        </span>
-      </div>
-
-      <!-- 4-CARD HEADLINE KPI STRIP -->
-      <section
-        id="portfolio-kpis"
-        class="kpi-grid"
-        aria-label="Portfolio Headline Metrics"
-      ></section>
-
-      <!-- CHART 1: GOVERNANCE-TO-PROFITABILITY POPULATION FUNNEL -->
-      <section class="panel chart-panel" aria-labelledby="funnel-heading">
-        <div class="panel__header chart-panel__header">
+      <div class="portfolio-main">
+        <div class="portfolio-banner">
           <div>
-            <h2 id="funnel-heading">
-              1 · GOVERNANCE-TO-PROFITABILITY POPULATION FUNNEL
-            </h2>
-            <p>
-              Progressive Policy-First suppression gates from Total Customer Book to Profitable Targetable Cohort (Expected Profit &gt; $0)
+            <h1 class="portfolio-banner__title">
+              Portfolio Segmentation, Risk &amp; Profitable Addressable Book
+            </h1>
+            <p id="portfolio-subtitle" class="portfolio-banner__sub">
+              Evaluating Policy-First governance gates and Expected Net Profit across the customer book…
             </p>
           </div>
+          <span class="portfolio-banner__hint">
+            Click any segment or product row below to filter &amp; work that cohort in the Advisor Workbench →
+          </span>
         </div>
-        <div id="chart-funnel" class="chart-body"></div>
-      </section>
 
-      <!-- 2-COLUMN CHARTS: SEGMENT x RISK MATRIX + OFFER EXPECTED PROFIT -->
-      <div class="portfolio-grid">
-        <!-- CHART 2: CUSTOMER SEGMENTATION x RISK TIER & PROFITABLE SHARE -->
-        <section class="panel chart-panel" aria-labelledby="seg-risk-heading">
+        <!-- 4-CARD HEADLINE KPI STRIP -->
+        <section
+          id="portfolio-kpis"
+          class="kpi-grid"
+          aria-label="Portfolio Headline Metrics"
+        ></section>
+
+        <!-- CHART 1: GOVERNANCE-TO-PROFITABILITY POPULATION FUNNEL -->
+        <section class="panel chart-panel" aria-labelledby="funnel-heading">
           <div class="panel__header chart-panel__header">
             <div>
-              <h2 id="seg-risk-heading">
-                2 · CUSTOMER SEGMENTATION × RISK TIER &amp; PROFITABLE SHARE
+              <h2 id="funnel-heading">
+                1 · GOVERNANCE-TO-PROFITABILITY POPULATION FUNNEL
               </h2>
               <p>
-                Risk tier composition (LOW / MED / HIGH) and net-profitable targetable rate per segment — click to drill into cohort
-              </p>
-            </div>
-            <div class="chart-legend" aria-label="Risk tier legend">
-              <span class="legend-item"><i class="legend-swatch swatch--low"></i>LOW</span>
-              <span class="legend-item"><i class="legend-swatch swatch--med"></i>MED</span>
-              <span class="legend-item"><i class="legend-swatch swatch--high"></i>HIGH</span>
-            </div>
-          </div>
-          <div id="chart-segment-risk" class="chart-body"></div>
-        </section>
-
-        <!-- CHART 3: TARGETABLE POPULATION & EXPECTED NET PROFIT BY OFFER -->
-        <section class="panel chart-panel" aria-labelledby="offer-profit-heading">
-          <div class="panel__header chart-panel__header">
-            <div>
-              <h2 id="offer-profit-heading">
-                3 · TARGETABLE POPULATION &amp; EXPECTED PROFIT BY PRODUCT OFFER
-              </h2>
-              <p>
-                Ranked by total annual Expected Net Profit ($) across primary #1 NBA assignments — click to drill into cohort
+                Progressive Policy-First suppression gates from Total Customer Book to Profitable Targetable Cohort (Expected Profit &gt; $0)
               </p>
             </div>
           </div>
-          <div id="chart-offer-profit" class="chart-body"></div>
+          <div id="chart-funnel" class="chart-body"></div>
         </section>
+
+        <!-- 2-COLUMN CHARTS: SEGMENT x RISK MATRIX + OFFER EXPECTED PROFIT -->
+        <div class="portfolio-grid">
+          <!-- CHART 2: CUSTOMER SEGMENTATION x RISK TIER & PROFITABLE SHARE -->
+          <section class="panel chart-panel" aria-labelledby="seg-risk-heading">
+            <div class="panel__header chart-panel__header">
+              <div>
+                <h2 id="seg-risk-heading">
+                  2 · CUSTOMER SEGMENTATION × RISK TIER &amp; PROFITABLE SHARE
+                </h2>
+                <p>
+                  Risk tier composition (LOW / MED / HIGH) and net-profitable targetable rate per segment — click to drill into cohort
+                </p>
+              </div>
+              <div class="chart-legend" aria-label="Risk tier legend">
+                <span class="legend-item"><i class="legend-swatch swatch--low"></i>LOW</span>
+                <span class="legend-item"><i class="legend-swatch swatch--med"></i>MED</span>
+                <span class="legend-item"><i class="legend-swatch swatch--high"></i>HIGH</span>
+              </div>
+            </div>
+            <div id="chart-segment-risk" class="chart-body"></div>
+          </section>
+
+          <!-- CHART 3: TARGETABLE POPULATION & EXPECTED NET PROFIT BY OFFER -->
+          <section class="panel chart-panel" aria-labelledby="offer-profit-heading">
+            <div class="panel__header chart-panel__header">
+              <div>
+                <h2 id="offer-profit-heading">
+                  3 · TARGETABLE POPULATION &amp; EXPECTED PROFIT BY PRODUCT OFFER
+                </h2>
+                <p>
+                  Ranked by total annual Expected Net Profit ($) across primary #1 NBA assignments — click to drill into cohort
+                </p>
+              </div>
+            </div>
+            <div id="chart-offer-profit" class="chart-body"></div>
+          </section>
+        </div>
       </div>
+
+      <!-- RIGHT DOCKED COLUMN: PORTFOLIO & IMPALA AI ANALYST CHAT -->
+      <section
+        class="panel panel--action panel--portfolio-chat"
+        aria-label="Portfolio AI Analyst Chat"
+      >
+        <div class="panel__header panel__header--tabs">
+          <div>
+            <h2>PORTFOLIO AI ANALYST</h2>
+            <p>Live CDW Impala &amp; Profitability Insights</p>
+          </div>
+          <div class="tabs" aria-hidden="true">
+            <span class="tab tab--active">Live AI Chat</span>
+          </div>
+        </div>
+
+        <div id="portfolio-pane-chat" class="chat-pane">
+          <div id="portfolio-chat" class="chat" aria-live="polite"></div>
+
+          <form id="portfolio-composer" class="composer" autocomplete="off">
+            <textarea
+              id="portfolio-composer-input"
+              class="composer__input"
+              rows="1"
+              placeholder="Ask about segments, risk, states, balances, or Expected Profit…"
+              aria-label="Ask Portfolio AI Analyst"
+            ></textarea>
+            <button
+              id="portfolio-composer-send"
+              type="submit"
+              class="btn btn--primary"
+            >
+              Send
+            </button>
+          </form>
+        </div>
+      </section>
     </main>
 
     <div id="toasts" class="toasts" aria-live="polite"></div>
 
-    <script type="module" src="js/main.js?v=8"></script>
+    <script type="module" src="js/main.js?v=9"></script>
   </body>
 </html>

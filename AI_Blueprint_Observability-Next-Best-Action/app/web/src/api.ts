@@ -140,6 +140,15 @@ export interface TurnResponse {
   clarify_count?: number | null;
 }
 
+export interface PortfolioChatResponse {
+  run_id: string | null;
+  assistant_message: string;
+  display_message: string;
+  executed_sql?: string | null;
+  row_count?: number;
+  channel: string;
+}
+
 export interface FeedbackResponse {
   ok: boolean;
   error?: string | null;
@@ -209,6 +218,26 @@ export async function postTurn(
   return {
     ...data,
     run_id: data.run_id ?? null,
+  };
+}
+
+export async function postPortfolioChatTurn(
+  message: string,
+  threadId: string,
+  channel: "BANKER_DESKTOP" | "IN_APP" = "BANKER_DESKTOP",
+): Promise<PortfolioChatResponse> {
+  const data = await requestJson<PortfolioChatResponse>("/api/analytics/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      thread_id: threadId,
+      channel,
+    }),
+  });
+  return {
+    ...data,
+    run_id: data.run_id ?? null,
+    executed_sql: data.executed_sql ?? null,
   };
 }
 
