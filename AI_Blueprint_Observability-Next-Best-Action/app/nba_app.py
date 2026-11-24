@@ -600,7 +600,7 @@ def offer_presentation_node(state: GraphState) -> Dict[str, Any]:
         )
         return {"messages": [AIMessage(content=content)]}
 
-    # Verbatim compliance lock from SQLite catalog
+    # Verbatim compliance lock from product catalog
     compliance_footer = offer.get("approved_compliance_template", "")
     profit_val = offer.get("expected_profit", 0.0)
 

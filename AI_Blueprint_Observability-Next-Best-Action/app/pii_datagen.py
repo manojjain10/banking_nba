@@ -5,7 +5,7 @@
 #  Applicable Open Source License: GNU Affero General Public License v3.0
 #***************************************************************************/
 
-"""SQLite-backed customer + offer seeder for the Governed NBA Prototype.
+"""Dual-backend (Apache Iceberg v2 / CDW Impala & SQLite) customer + offer seeder.
 
 Generates synthetic customers across four banking segments:
   - Mass_Affluent
@@ -25,11 +25,19 @@ import json
 import os
 import random
 import sqlite3
-from typing import Iterable
+from typing import Any, Iterable
 
 from faker import Faker
 
-from db import DB_PATH, get_conn, init_schema, seed_offers
+from db import (
+    DB_PATH,
+    describe_db_target,
+    format_sql_literal,
+    get_conn,
+    init_schema,
+    is_impala_backend,
+    seed_offers,
+)
 
 _SEGMENTS = [
     "Mass_Affluent",
@@ -271,44 +279,101 @@ def _customer_rows(start_id: int, end_id: int, seed: int) -> Iterable[tuple]:
         )
 
 
+_CUSTOMER_COLUMNS = (
+    "customer_id",
+    "full_name",
+    "email",
+    "phone_number",
+    "street_address",
+    "city",
+    "state",
+    "zip_code",
+    "company",
+    "job_title",
+    "age",
+    "annual_income",
+    "employment_status",
+    "existing_debt",
+    "risk_tier",
+    "credit_score",
+    "avg_checking_balance",
+    "customer_segment",
+    "current_products",
+    "preferred_channel",
+    "do_not_solicit",
+    "last_contact_days_ago",
+)
+
+
 def seed_customers(
-    conn: sqlite3.Connection,
+    conn: Any,
     n: int = 10_000,
     seed: int = 42,
     reseed: bool = False,
+    batch_size: int = 1_000,
 ) -> int:
     """Seed the ``customers`` table up to ``n`` rows. Idempotent unless ``reseed=True``."""
+    impala_mode = is_impala_backend(conn)
+
     if reseed:
-        conn.execute("DELETE FROM customers")
+        if impala_mode:
+            try:
+                conn.execute("TRUNCATE TABLE customers")
+            except Exception:  # noqa: BLE001
+                conn.execute("DELETE FROM customers")
+        else:
+            conn.execute("DELETE FROM customers")
         conn.commit()
 
-    existing = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+    existing = int(conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0])
     if existing >= n:
         print(f"[pii_datagen] customers already has {existing} rows (>= {n}); skipping seed.")
         return existing
 
-    print(f"[pii_datagen] seeding customers {existing + 1}..{n} ...")
-    rows = list(_customer_rows(existing + 1, n, seed=seed))
-    conn.executemany(
-        """
-        INSERT INTO customers (
-            customer_id, full_name, email, phone_number, street_address,
-            city, state, zip_code, company, job_title,
-            age, annual_income, employment_status, existing_debt, risk_tier,
-            credit_score, avg_checking_balance, customer_segment,
-            current_products, preferred_channel, do_not_solicit, last_contact_days_ago
-        ) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)
-        """,
-        rows,
+    print(
+        f"[pii_datagen] seeding customers {existing + 1}..{n} "
+        f"(backend={'impala-iceberg' if impala_mode else 'sqlite'}) ..."
     )
-    conn.commit()
-    total = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+    rows = list(_customer_rows(existing + 1, n, seed=seed))
+    col_list = ", ".join(_CUSTOMER_COLUMNS)
+
+    if impala_mode:
+        step = max(1, int(batch_size))
+        total_batches = (len(rows) + step - 1) // step
+        for b_idx, start in enumerate(range(0, len(rows), step), start=1):
+            chunk = rows[start : start + step]
+            values_sql = ",\n".join(
+                "(" + ", ".join(format_sql_literal(v) for v in row) + ")"
+                for row in chunk
+            )
+            conn.execute(f"INSERT INTO customers ({col_list}) VALUES\n{values_sql}")
+            print(
+                f"[pii_datagen] committed Iceberg batch {b_idx}/{total_batches} "
+                f"({len(chunk)} rows)",
+                flush=True,
+            )
+        try:
+            conn.execute("COMPUTE STATS customers")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[pii_datagen] note: COMPUTE STATS customers skipped ({exc})")
+        conn.commit()
+    else:
+        placeholders = ", ".join("?" for _ in _CUSTOMER_COLUMNS)
+        conn.executemany(
+            f"INSERT INTO customers ({col_list}) VALUES ({placeholders})",
+            rows,
+        )
+        conn.commit()
+
+    total = int(conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0])
     print(f"[pii_datagen] customers total after seed: {total}")
     return total
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed the NBA demo SQLite database.")
+    parser = argparse.ArgumentParser(
+        description="Seed the NBA demo database (CDW Impala Apache Iceberg v2 or SQLite)."
+    )
     parser.add_argument(
         "--rows",
         type=int,
@@ -326,14 +391,26 @@ def main() -> None:
         help="Clear and regenerate customer rows so updated segment/risk distributions take effect.",
     )
     parser.add_argument("--seed", type=int, default=42, help="Faker/RNG seed.")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=int(os.environ.get("NBA_ICEBERG_BATCH_SIZE", "1000")),
+        help="Multi-row INSERT batch size when seeding Apache Iceberg tables (default 1000).",
+    )
     args = parser.parse_args()
 
     with get_conn() as conn:
         init_schema(conn)
         n_offers = seed_offers(conn)
-        n_customers = seed_customers(conn, n=args.rows, seed=args.seed, reseed=args.reseed)
+        n_customers = seed_customers(
+            conn,
+            n=args.rows,
+            seed=args.seed,
+            reseed=args.reseed,
+            batch_size=args.batch_size,
+        )
         print(
-            f"[pii_datagen] DB ready at {DB_PATH} "
+            f"[pii_datagen] DB ready at {describe_db_target()} "
             f"(offers={n_offers}, customers={n_customers})"
         )
 

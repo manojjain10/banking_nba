@@ -17,13 +17,14 @@ Serves:
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import logging
 import os
 import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, AsyncIterator, Dict, List, Literal, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -31,7 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from langsmith import Client
 from pydantic import BaseModel, Field
 
-from db import get_conn, init_schema, seed_offers
+from db import describe_db_target, ensure_db_ready, get_conn, init_schema, seed_offers
 from nba_app import (
     HIGH_RISK_THRESHOLD,
     LANGSMITH_ORG,
@@ -150,10 +151,22 @@ class OutcomeResponse(BaseModel):
 # App
 # ----------------------------------------------------------------------
 
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    try:
+        ensure_db_ready()
+        log.info("Database backing store verified: %s", describe_db_target())
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Startup DB verification deferred (%s): %s", describe_db_target(), exc)
+    yield
+
+
 app = FastAPI(
     title="Governed NBA Chatbot API",
     description="Hyper-Personalized Cross-Selling Engine on Cloudera AI.",
     version="1.2.0",
+    lifespan=_lifespan,
 )
 
 
@@ -301,9 +314,10 @@ def post_turn(req: TurnRequest) -> TurnResponse:
 def simulate_realtime_event(req: SimulatedEventRequest) -> TurnResponse:
     """Simulate a real-time streaming event (CDF trigger) and evaluate NBA immediately.
 
-    Updates the customer's SQLite profile to reflect the live event, then runs
-    a two-step turn sequence so the agent immediately returns the governed
-    Expected-Profit recommendation (or suppression notice) without extra setup.
+    Updates the customer's profile in Apache Iceberg v2 (CDW Impala) or SQLite
+    to reflect the live event, then runs a two-step turn sequence so the agent
+    immediately returns the governed Expected-Profit recommendation (or
+    suppression notice) without extra setup.
     """
     conn = get_conn()
     try:
@@ -499,18 +513,7 @@ def post_outcome(req: OutcomeRequest) -> OutcomeResponse:
     recorded_at = datetime.now(timezone.utc).isoformat()
     conn = get_conn()
     try:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS offer_outcomes (
-                customer_id      INTEGER NOT NULL,
-                offer_id         TEXT NOT NULL,
-                outcome          TEXT NOT NULL,
-                channel          TEXT,
-                simulated_amount REAL,
-                recorded_at      TEXT NOT NULL
-            )
-            """
-        )
+        init_schema(conn)
         conn.execute(
             """
             INSERT INTO offer_outcomes (

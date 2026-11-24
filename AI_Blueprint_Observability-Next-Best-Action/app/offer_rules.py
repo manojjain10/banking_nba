@@ -20,8 +20,9 @@ Implements the two-stage decisioning architecture:
 from __future__ import annotations
 
 import json
-import sqlite3
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+from db import get_offers
 
 
 def _row_to_dict(row: Any, columns: Optional[Sequence[str]] = None) -> Dict[str, Any]:
@@ -35,18 +36,18 @@ def _row_to_dict(row: Any, columns: Optional[Sequence[str]] = None) -> Dict[str,
 
 
 def _fetch_all_dicts(conn: Any, sql: str) -> List[Dict[str, Any]]:
-    """Execute a SELECT query portably across SQLite and DB-API 2.0 (Impala/Iceberg)."""
-    if hasattr(conn, "execute") and isinstance(conn, sqlite3.Connection):
+    """Execute a SELECT query portably across SQLite, ImpalaConnection, and DB-API 2.0."""
+    if hasattr(conn, "execute"):
         cur = conn.execute(sql)
         rows = cur.fetchall()
-        cols = [d[0].split(".")[-1] for d in (cur.description or [])]
+        cols = [str(d[0]).split(".")[-1] for d in (cur.description or [])]
         return [_row_to_dict(r, cols) for r in rows]
 
     cur = conn.cursor()
     try:
         cur.execute(sql)
         rows = cur.fetchall()
-        cols = [d[0].split(".")[-1] for d in (cur.description or [])]
+        cols = [str(d[0]).split(".")[-1] for d in (cur.description or [])]
         return [_row_to_dict(r, cols) for r in rows]
     finally:
         cur.close()
@@ -298,7 +299,7 @@ def evaluate_governance_and_rank(
 
     Returns ``(ranked_eligible_offers, suppression_audit_log)``.
     """
-    all_offers = _fetch_all_dicts(conn, "SELECT * FROM offers ORDER BY priority ASC")
+    all_offers = get_offers(conn)
     return _rank_offers_for_customer(
         all_offers,
         customer,
@@ -344,7 +345,7 @@ def compute_portfolio_analytics(
     )
     contact_cost = 0.50 if normalized_channel == "IN_APP" else 18.00
 
-    all_offers = _fetch_all_dicts(conn, "SELECT * FROM offers ORDER BY priority ASC")
+    all_offers = get_offers(conn)
     customers = _fetch_all_dicts(
         conn,
         """
@@ -606,7 +607,7 @@ def filter_portfolio_customers(
     normalized_channel = (
         "IN_APP" if str(channel_override or "").upper() == "IN_APP" else "BANKER_DESKTOP"
     )
-    all_offers = _fetch_all_dicts(conn, "SELECT * FROM offers ORDER BY priority ASC")
+    all_offers = get_offers(conn)
     customers = _fetch_all_dicts(
         conn,
         """
